@@ -1,0 +1,69 @@
+{
+  "aspect": 0.5625,
+  "count": 1020,
+  "chapters": [
+    {
+      "id": "ground",
+      "start": 0,
+      "end": 71,
+      "scroll": 150,
+      "fps": 6
+    },
+    {
+      "id": "frame",
+      "start": 72,
+      "end": 167,
+      "scroll": 210,
+      "fps": 3
+    },
+    {
+      "id": "finish",
+      "start": 168,
+      "end": 277,
+      "scroll": 170,
+      "fps": 5
+    },
+    {
+      "id": "vision",
+      "start": 278,
+      "end": 367,
+      "scroll": 160,
+      "fps": 5
+    },
+    {
+      "id": "arrival",
+      "start": 368,
+      "end": 451,
+      "scroll": 130,
+      "fps": 6
+    },
+    {
+      "id": "lobby",
+      "start": 452,
+      "end": 559,
+      "scroll": 140,
+      "fps": 8
+    },
+    {
+      "id": "doors",
+      "start": 560,
+      "end": 648,
+      "scroll": 170,
+      "fps": 20
+    },
+    {
+      "id": "terrace",
+      "start": 649,
+      "end": 794,
+      "scroll": 360,
+      "fps": 10
+    },
+    {
+      "id": "suites",
+      "start": 795,
+      "end": 1019,
+      "scroll": 280,
+      "fps": 8
+    }
+  ]
+}

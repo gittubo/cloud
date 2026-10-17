@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Just10 Group — Building landmarks</title>
+    <meta name="description" content="Just10 Group is a design-and-build construction company delivering landmark hospitality, residential and commercial projects — from first survey to final handover." />
+    <meta name="theme-color" content="#08090b" />
+    <link rel="icon" type="image/png" href="/brand/favicon.png" />
+    <meta property="og:title" content="Just10 Group — Building landmarks" />
+    <meta property="og:description" content="From raw earth to landmark. Scroll the story of a build." />
+    <meta property="og:image" content="/frames/hd/f00700.webp" />
+    <link rel="preload" as="image" href="/frames/hd/f00000.webp" />
+  </head>
+  <body>
+    <div class="preloader" aria-hidden="true">
+      <img class="preloader__mark" src="/brand/logo-mark.png" alt="" />
+      <div class="preloader__bar"><span></span></div>
+      <p class="preloader__label">Preparing the site <span class="preloader__pct">0%</span></p>
+    </div>
+
+    <header class="nav">
+      <a class="nav__logo" href="#top" aria-label="Just10 Group — back to top">
+        <img src="/brand/logo-full.png" alt="Just10 Group" width="1155" height="409" />
+      </a>
+      <nav class="nav__links" aria-label="Main">
+        <a href="#services">Services</a>
+        <a href="#process">Process</a>
+        <a class="nav__cta" href="#contact">Start a project</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="story" aria-label="The story of a build">
+        <div class="stage">
+          <canvas class="ambient" width="48" height="85" aria-hidden="true"></canvas>
+          <div class="panel">
+            <canvas class="film" aria-hidden="true"></canvas>
+            <div class="bloom" aria-hidden="true"></div>
+          </div>
+          <div class="grain" aria-hidden="true"></div>
+          <div class="captions"></div>
+
+          <div class="reveal">
+            <h1 class="reveal__logo">
+              <span class="sr-only">Just10 Group</span>
+              <span class="reveal__glow" aria-hidden="true"></span>
+              <img class="layer layer--mark" src="/brand/logo-mark.png" alt="" />
+              <img class="layer layer--divider" src="/brand/logo-divider.png" alt="" />
+              <img class="layer layer--just10" src="/brand/logo-just10.png" alt="" />
+              <img class="layer layer--group" src="/brand/logo-group.png" alt="" />
+            </h1>
+            <p class="reveal__tagline"></p>
+            <div class="reveal__anchor" aria-hidden="true"></div>
+          </div>
+
+          <ol class="rail" aria-hidden="true"></ol>
+          <div class="progress" aria-hidden="true"><span></span></div>
+          <p class="cue" aria-hidden="true"><span>Scroll to build</span><i></i></p>
+        </div>
+      </section>
+
+      <section class="services" id="services">
+        <header class="section-head">
+          <p class="eyebrow">What we do</p>
+          <h2>One team, <em>from ground to keys.</em></h2>
+        </header>
+        <ol class="services__grid"></ol>
+      </section>
+
+      <section class="process" id="process">
+        <header class="section-head">
+          <p class="eyebrow">How we work</p>
+          <h2>Clear steps. <em>No surprises.</em></h2>
+        </header>
+        <ol class="process__steps"></ol>
+      </section>
+
+      <section class="contact" id="contact">
+        <div class="contact__intro">
+          <p class="eyebrow">Start a project</p>
+          <h2>Have a landmark <em>in mind?</em></h2>
+          <p>Tell us about the site, the brief and the timeline. We’ll come back to you to arrange a first conversation.</p>
+          <ul class="contact__details"></ul>
+        </div>
+        <form class="contact__form">
+          <label><span>Name</span><input name="name" autocomplete="name" required /></label>
+          <label><span>Email</span><input name="email" type="email" autocomplete="email" required /></label>
+          <label><span>Project type</span>
+            <select name="type">
+              <option>Hospitality</option>
+              <option>Residential</option>
+              <option>Commercial</option>
+              <option>Mixed-use</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label class="wide"><span>About the project</span><textarea name="message" rows="4"></textarea></label>
+          <button type="submit">Send enquiry</button>
+        </form>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <img src="/brand/logo-full-light.png" alt="Just10 Group" width="1155" height="409" />
+      <p class="footer__tag"></p>
+      <p class="footer__legal">© <span class="year"></span> Just10 Group. All rights reserved.</p>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
