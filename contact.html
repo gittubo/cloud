@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Start a project — Just10 Group</title>
+    <meta name="description" content="Tell Just10 Group about your site, brief and timeline." />
+    <meta name="theme-color" content="#08090b" />
+    <link rel="icon" type="image/png" href="/brand/favicon.png" />
+  </head>
+  <body data-page="contact">
+    <header class="nav"></header>
+    <main id="top">
+      <section class="page-hero page-hero--short">
+        <img class="page-hero__bg" alt="" />
+        <div class="page-hero__inner">
+          <p class="eyebrow">05 — Contact</p>
+          <h1 class="title-caps title-caps--xl">Start a <em>Project.</em></h1>
+          <p class="body">Tell us about the site, the brief and the timeline. We’ll come back to you to arrange a first conversation.</p>
+        </div>
+      </section>
+      <section class="contact" id="contact">
+        <ul class="contact__details"></ul>
+        <form class="contact__form">
+          <label><span>Name</span><input name="name" autocomplete="name" required /></label>
+          <label><span>Email</span><input name="email" type="email" autocomplete="email" required /></label>
+          <label><span>Project type</span>
+            <select name="type">
+              <option>Hospitality</option>
+              <option>Residential</option>
+              <option>Commercial</option>
+              <option>Mixed-use</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label class="wide"><span>About the project</span><textarea name="message" rows="4"></textarea></label>
+          <button class="button" type="submit">Send enquiry <i aria-hidden="true">→</i></button>
+        </form>
+      </section>
+    </main>
+    <footer class="footer"></footer>
+    <script type="module" src="/src/pages/contact.ts"></script>
+  </body>
+</html>

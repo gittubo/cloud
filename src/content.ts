@@ -1,4 +1,4 @@
-// All copy for the scroll story and the sections after it.
+// All copy for the site.
 // Figures marked PLACEHOLDER are illustrative until Just10 Group supplies
 // real numbers — replace them before launch.
 
@@ -8,6 +8,7 @@ export interface Stat {
   prefix?: string
   suffix?: string
   label: string
+  note?: string
 }
 
 export interface Chapter {
@@ -22,6 +23,17 @@ export interface Chapter {
   stats?: Stat[]
 }
 
+export type PageId = 'home' | 'resort' | 'suites' | 'services' | 'contact'
+
+export const pages: { id: PageId; href: string; label: string; title: string }[] = [
+  { id: 'home', href: './', label: 'Home', title: 'Just10 Group' },
+  { id: 'resort', href: './resort.html', label: 'The Resort', title: 'The *Resort.*' },
+  { id: 'suites', href: './suites.html', label: 'Suites', title: 'Every *Room.*' },
+  { id: 'services', href: './services.html', label: 'Services', title: 'What we *Build.*' },
+  { id: 'contact', href: './contact.html', label: 'Contact', title: 'Start a *Project.*' },
+]
+
+/** Landing page: from bare earth to the lobby doors. */
 export const chapters: Chapter[] = [
   {
     id: 'ground',
@@ -71,40 +83,63 @@ export const chapters: Chapter[] = [
     title: 'Marble, light *and calm.*',
     body: 'Interior fit-out finished to hospitality standard, down to the last joint.',
   },
-  { id: 'doors', rail: 'Threshold' },
-  {
-    id: 'terrace',
-    rail: 'Just10 Group',
-    eyebrow: 'From first survey to final handover',
-    // PLACEHOLDER figures
-    stats: [
-      { value: 15, suffix: '+', label: 'Years building' },
-      { value: 120, suffix: '+', label: 'Projects delivered' },
-      { value: 350, suffix: 'k', label: 'm² constructed' },
-    ],
-  },
-  {
-    id: 'suites',
-    rail: 'Suites',
-    eyebrow: '09 — Suites',
-    title: 'Step inside *the detail.*',
-    body: 'Bedrooms, baths and living spaces — fitted, finished and handed over ready for the first guest.',
-  },
+  { id: 'doors', rail: 'Just10 Group' },
 ]
 
 export const brand = {
   name: 'Just10 Group',
   tagline: 'Building landmarks.',
-  statement: 'We don’t just build structures. *We build landmarks.*',
+}
+
+/** Resort page: out through the doors, across the terrace, up to the aerial. */
+export const resort = {
+  eyebrow: '02 — The Resort',
+  hero: { title: 'Beyond the *doors.*', body: 'Step outside and the whole programme comes together — structure, envelope, landscape and water, delivered as one.' },
+  project: {
+    title: 'The *Resort.*',
+    body: 'A twelve-storey hospitality landmark, taken from cleared ground to opening day by a single team.',
+    // PLACEHOLDER figures
+    specs: [
+      { label: 'Storeys', value: '12' },
+      { label: 'Keys', value: '240' },
+      { label: 'Programme', value: '26 mo' },
+      { label: 'Contract', value: 'Design & Build' },
+    ],
+  },
+  statement: 'Not just a building. *A landmark.*',
+  // PLACEHOLDER figures
+  numbers: [
+    { value: 15, suffix: '+', label: 'Years building', note: 'Founded on site, grown project by project.' },
+    { value: 120, suffix: '+', label: 'Projects delivered', note: 'Hospitality, residential, commercial and civil.' },
+    { value: 350, suffix: 'k', label: 'm² constructed', note: 'Gross floor area handed over to clients.' },
+    { value: 0, label: 'Lost-time incidents', note: 'On the current programme, and counting.' },
+  ] as Stat[],
+}
+
+/** Suites page: the floor scan, the dive through a window, the rooms. */
+export const suites = {
+  eyebrow: '03 — Suites',
+  hero: { title: 'Every *Room.*', body: 'Twelve floors. Hundreds of rooms. Each one built to the same standard.' },
+  scan: { prompt: 'Selecting a floor', locked: 'Level 08', lockedNote: 'Signature Suite' },
+  // Floors as seen in the tower frame: y-centre of each level in source
+  // pixels (720×1280), measured from the frame at 1.0 s of c-suites.mp4.
+  floors: { firstY: 572, podium: [572, 542], guestTopY: 320, guestBottomY: 512, guestCount: 10, x0: 0.014, x1: 0.868, lock: 8 },
+  features: [
+    { at: 0.02, title: 'Rest, *refined.*', body: 'Acoustic separation, blackout joinery and climate control tuned room by room.' },
+    { at: 0.12, title: 'Stone *& light.*', body: 'Large-format porcelain, frameless glass and lighting set into every line.' },
+    { at: 0.3, title: 'Room to *breathe.*', body: 'Open-plan suites where structure steps aside for the view.' },
+    { at: 0.56, title: 'Living, *elevated.*', body: 'Corridors, lounges and suites finished to one hospitality standard.' },
+  ],
+  finale: 'Crafted.',
 }
 
 export const services = [
-  { title: 'Design & Build', body: 'One contract, one team, one point of accountability from concept to keys.' },
-  { title: 'Civil & Structural', body: 'Earthworks, foundations and reinforced-concrete frames, built to tolerance.' },
-  { title: 'Project Management', body: 'Programme, cost and quality control with reporting you can actually read.' },
-  { title: 'Interior Fit-out', body: 'Hospitality-grade finishes, joinery and FF&E installation.' },
-  { title: 'MEP & Facades', body: 'Mechanical, electrical, plumbing and envelope packages, fully coordinated.' },
-  { title: 'Landscape & External Works', body: 'Pools, hardscape, planting and lighting that complete the picture.' },
+  { title: 'Design & Build', body: 'One contract, one team, one point of accountability from concept to keys.', still: 'vision' },
+  { title: 'Civil & Structural', body: 'Earthworks, foundations and reinforced-concrete frames, built to tolerance.', still: 'frame' },
+  { title: 'Project Management', body: 'Programme, cost and quality control with reporting you can actually read.', still: 'finish' },
+  { title: 'Interior Fit-out', body: 'Hospitality-grade finishes, joinery and FF&E installation.', still: 'lobby' },
+  { title: 'MEP & Facades', body: 'Mechanical, electrical, plumbing and envelope packages, fully coordinated.', still: 'arrival' },
+  { title: 'Landscape & External Works', body: 'Pools, hardscape, planting and lighting that complete the picture.', still: 'terrace' },
 ]
 
 export const process = [

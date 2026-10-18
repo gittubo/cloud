@@ -1,6 +1,6 @@
 {
   "aspect": 0.5625,
-  "count": 1020,
+  "count": 1054,
   "chapters": [
     {
       "id": "ground",
@@ -59,10 +59,24 @@
       "fps": 10
     },
     {
-      "id": "suites",
+      "id": "tower",
       "start": 795,
-      "end": 1019,
-      "scroll": 280,
+      "end": 816,
+      "scroll": 200,
+      "fps": 10
+    },
+    {
+      "id": "dive",
+      "start": 817,
+      "end": 865,
+      "scroll": 120,
+      "fps": 20
+    },
+    {
+      "id": "rooms",
+      "start": 866,
+      "end": 1053,
+      "scroll": 360,
       "fps": 8
     }
   ]

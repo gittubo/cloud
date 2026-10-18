@@ -34,7 +34,11 @@ CHAPTERS = [
     ("lobby",   "a-build.mp4",   98.0,  111.5, 8, 140),
     ("doors",   "a-build.mp4",   111.5, None,  20, 170),
     ("terrace", "b-terrace.mp4", 0.0,   None,  10, 360),
-    ("suites",  "c-suites.mp4",  0.0,   None,  8, 280),
+    # Suites page: the tower holds still for the floor scan, then a fast dive
+    # through one window (sampled densely) into the rooms.
+    ("tower",   "c-suites.mp4",  0.0,   2.2,   10, 200),
+    ("dive",    "c-suites.mp4",  2.2,   4.6,   20, 120),
+    ("rooms",   "c-suites.mp4",  4.6,   None,  8, 360),
 ]
 
 TIERS = {"hd": (720, 55), "sd": (480, 55)}

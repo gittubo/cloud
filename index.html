@@ -9,26 +9,17 @@
     <link rel="icon" type="image/png" href="/brand/favicon.png" />
     <meta property="og:title" content="Just10 Group — Building landmarks" />
     <meta property="og:description" content="From raw earth to landmark. Scroll the story of a build." />
-    <meta property="og:image" content="/frames/hd/f00700.webp" />
+    <meta property="og:image" content="/brand/logo-full.png" />
     <link rel="preload" as="image" href="/frames/hd/f00000.webp" />
   </head>
-  <body>
+  <body data-page="home">
     <div class="preloader" aria-hidden="true">
       <img class="preloader__mark" src="/brand/logo-mark.png" alt="" />
       <div class="preloader__bar"><span></span></div>
       <p class="preloader__label">Preparing the site <span class="preloader__pct">0%</span></p>
     </div>
 
-    <header class="nav">
-      <a class="nav__logo" href="#top" aria-label="Just10 Group — back to top">
-        <img src="/brand/logo-full.png" alt="Just10 Group" width="1155" height="409" />
-      </a>
-      <nav class="nav__links" aria-label="Main">
-        <a href="#services">Services</a>
-        <a href="#process">Process</a>
-        <a class="nav__cta" href="#contact">Start a project</a>
-      </nav>
-    </header>
+    <header class="nav nav--home"></header>
 
     <main id="top">
       <section class="story" aria-label="The story of a build">
@@ -51,7 +42,10 @@
               <img class="layer layer--group" src="/brand/logo-group.png" alt="" />
             </h1>
             <p class="reveal__tagline"></p>
-            <div class="reveal__anchor" aria-hidden="true"></div>
+            <p class="reveal__actions">
+              <a class="button" href="./resort.html">Discover the resort <i aria-hidden="true">→</i></a>
+              <a class="button button--ghost" href="./contact.html">Start a project</a>
+            </p>
           </div>
 
           <ol class="rail" aria-hidden="true"></ol>
@@ -60,53 +54,11 @@
         </div>
       </section>
 
-      <section class="services" id="services">
-        <header class="section-head">
-          <p class="eyebrow">What we do</p>
-          <h2>One team, <em>from ground to keys.</em></h2>
-        </header>
-        <ol class="services__grid"></ol>
-      </section>
-
-      <section class="process" id="process">
-        <header class="section-head">
-          <p class="eyebrow">How we work</p>
-          <h2>Clear steps. <em>No surprises.</em></h2>
-        </header>
-        <ol class="process__steps"></ol>
-      </section>
-
-      <section class="contact" id="contact">
-        <div class="contact__intro">
-          <p class="eyebrow">Start a project</p>
-          <h2>Have a landmark <em>in mind?</em></h2>
-          <p>Tell us about the site, the brief and the timeline. We’ll come back to you to arrange a first conversation.</p>
-          <ul class="contact__details"></ul>
-        </div>
-        <form class="contact__form">
-          <label><span>Name</span><input name="name" autocomplete="name" required /></label>
-          <label><span>Email</span><input name="email" type="email" autocomplete="email" required /></label>
-          <label><span>Project type</span>
-            <select name="type">
-              <option>Hospitality</option>
-              <option>Residential</option>
-              <option>Commercial</option>
-              <option>Mixed-use</option>
-              <option>Other</option>
-            </select>
-          </label>
-          <label class="wide"><span>About the project</span><textarea name="message" rows="4"></textarea></label>
-          <button type="submit">Send enquiry</button>
-        </form>
-      </section>
+      <section class="next" aria-label="Next page"></section>
     </main>
 
-    <footer class="footer">
-      <img src="/brand/logo-full-light.png" alt="Just10 Group" width="1155" height="409" />
-      <p class="footer__tag"></p>
-      <p class="footer__legal">© <span class="year"></span> Just10 Group. All rights reserved.</p>
-    </footer>
+    <footer class="footer"></footer>
 
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/pages/home.ts"></script>
   </body>
 </html>

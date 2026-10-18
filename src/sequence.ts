@@ -17,15 +17,17 @@ export class FrameSequence {
   private readonly priority: number[]
   onLoad: (() => void) | null = null
 
-  constructor(count: number, private readonly tier: Tier, sparseStep = 12, densePrefix = 24) {
+  /** Plays frames first..last of the full film; indices below are local to that range. */
+  constructor(private readonly first: number, last: number, private readonly tier: Tier, sparseStep = 12, densePrefix = 24) {
+    const count = last - first + 1
     this.count = count
     this.images = new Array(count).fill(null)
     this.requested = new Array(count).fill(false)
     // First the opening frames densely, then a coarse pass over the whole film,
     // so any scroll position has something to show almost immediately.
-    const first = Array.from({ length: Math.min(densePrefix, count) }, (_, i) => i)
+    const opening = Array.from({ length: Math.min(densePrefix, count) }, (_, i) => i)
     const sparse = Array.from({ length: Math.ceil(count / sparseStep) }, (_, i) => i * sparseStep)
-    this.priority = [...new Set([...first, ...sparse])]
+    this.priority = [...new Set([...opening, ...sparse])]
   }
 
   get bootstrapSize(): number {
@@ -37,7 +39,7 @@ export class FrameSequence {
   }
 
   url(i: number): string {
-    return `${import.meta.env.BASE_URL}frames/${this.tier}/f${String(i).padStart(5, '0')}.webp`
+    return `${import.meta.env.BASE_URL}frames/${this.tier}/f${String(this.first + i).padStart(5, '0')}.webp`
   }
 
   start(): void {

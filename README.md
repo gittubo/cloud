@@ -1,9 +1,16 @@
 # Just10 Group — cinematic scroll site
 
-A single-page site that tells the story of a build as you scroll: bare earth →
-structure → finished resort → lobby → the glass doors swing open onto the
-**Just10 Group** name → terrace → aerial → suites, followed by services,
-process and contact.
+A cinematic, scroll-driven site that tells the story of a build:
+
+| Page | File | What happens |
+|---|---|---|
+| 01 Home | `index.html` | Bare earth → structure → finished resort → lobby; the glass doors swing open onto the **Just10 Group** name |
+| 02 The Resort | `resort.html` | Through the doors, across the terrace, up to the aerial; project specs and headline numbers |
+| 03 Suites | `suites.html` | A beam of light scans the tower floor by floor, locks onto one, and the camera dives through its window into the rooms |
+| 04 Services | `services.html` | Services and process |
+| 05 Contact | `contact.html` | Enquiry form |
+
+Each page ends with a full-screen card leading to the next.
 
 ## Run it
 
@@ -25,10 +32,14 @@ npm run preview    # serve dist/
   (`public/brand/`) so the monogram, divider, "Just10" and "GROUP" can animate
   in one by one.
 - **Playback** — `src/sequence.ts` streams frames nearest-first and draws them
-  to a canvas, crossfading neighbours so low-fps chapters stay smooth.
-  `src/main.ts` pins the stage and drives one GSAP ScrollTrigger timeline
-  (smoothed by Lenis): film, captions, the door reveal and the hand-off of the
-  logo into the nav.
+  to a canvas, crossfading neighbours so low-fps chapters stay smooth. Each
+  page loads only its own chapters' frames. `src/core.ts` holds what every
+  page shares (nav, footer, next-page card, smooth scrolling via Lenis, the
+  film player, pinning with GSAP ScrollTrigger); `src/pages/*.ts` holds each
+  page's timeline.
+- **Floor scan** — the floor positions are measured on the tower frame and
+  stored in `suites.floors` in `src/content.ts`; change `lock` there to pick a
+  different floor.
 - **Copy** — every word lives in `src/content.ts`.
 - **Reduced motion** — visitors who ask for it get one still per chapter with
   normal scrolling; slow or data-saver connections get the lighter `sd` frames

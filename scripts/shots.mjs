@@ -1,67 +1,88 @@
-// Screenshots of key story moments, for review. Needs `npm run build` first.
-// Usage: node scripts/shots.mjs [outDir]
+// Screenshots of key moments on every page, for review. Needs `npm run build` first.
+// Usage: node scripts/shots.mjs [outDir] [pageFilter]
+// CHROMIUM_PATH points at a pre-installed browser when Playwright's own build is absent.
 import { spawn } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { chromium } from 'playwright'
 
 const out = process.argv[2] ?? '.shots'
+const only = process.argv[3]
 mkdirSync(out, { recursive: true })
 
 const PORT = 4179
 const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'ignore' })
 await new Promise((r) => setTimeout(r, 2500))
 
-// [name, chapter id, fraction through chapter] — or a selector to scroll to.
-const moments = [
-  ['01-hero', 'ground', 0],
-  ['02-structure', 'frame', 0.45],
-  ['03-envelope', 'finish', 0.5],
-  ['04-design', 'vision', 0.5],
-  ['05-arrival', 'arrival', 0.5],
-  ['06-lobby', 'lobby', 0.5],
-  ['07-doors-opening', 'doors', 0.72],
-  ['08-name-revealed', 'doors', 0.99],
-  ['09-terrace-hold', 'terrace', 0.2],
-  ['10-handoff', 'terrace', 0.4],
-  ['11-statement', 'terrace', 0.58],
-  ['12-stats', 'terrace', 0.9],
-  ['13-suites', 'suites', 0.5],
-  ['14-services', '#services'],
-  ['15-contact', '#contact'],
-]
+// Per page: [name, chapter id, fraction] (scrubbed film position) or [name, selector].
+const pages = {
+  index: [
+    ['hero', 'ground', 0],
+    ['lobby', 'lobby', 0.5],
+    ['doors-opening', 'doors', 0.72],
+    ['name', 'doors', 0.99],
+    ['finale', 'finale', 0.6],
+    ['next', '.next'],
+  ],
+  resort: [
+    ['hero', 'page', 0],
+    ['project', 'page', 0.34],
+    ['statement', 'page', 0.6],
+    ['numbers', 'page', 0.95],
+  ],
+  suites: [
+    ['hero', 'tower', 0.02],
+    ['scan-a', 'tower', 0.24],
+    ['scan-b', 'tower', 0.5],
+    ['locked', 'tower', 0.84],
+    ['dive', 'dive', 0.25],
+    ['room-01', 'rooms', 0.07],
+    ['room-03', 'rooms', 0.38],
+    ['finale', 'rooms', 0.97],
+  ],
+  services: [
+    ['hero', '#top'],
+    ['list', '.service-list'],
+    ['process', '.process-page'],
+  ],
+  contact: [
+    ['hero', '#top'],
+    ['form', '.contact'],
+  ],
+}
 
 const viewports = [
   ['desktop', { width: 1440, height: 900 }],
   ['mobile', { width: 390, height: 844, isMobile: true, deviceScaleFactor: 2 }],
 ]
 
-// CHROMIUM_PATH points at a pre-installed browser when Playwright's own build is absent.
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined })
 try {
   for (const [label, viewport] of viewports) {
     const { isMobile, deviceScaleFactor, ...size } = viewport
-    const page = await browser.newPage({ viewport: size, isMobile, deviceScaleFactor })
-    const errors = []
-    page.on('pageerror', (e) => errors.push(e.message))
-    await page.goto(`http://localhost:${PORT}/`)
-    await page.waitForSelector('html.is-ready', { timeout: 30000 })
-    await page.waitForTimeout(1800)
-    for (const [name, target, frac] of moments) {
-      await page.evaluate(
-        ([target, frac]) => {
-          const s = window.__story
-          const y = target.startsWith('#')
-            ? document.querySelector(target).getBoundingClientRect().top + window.scrollY
-            : (s.at(target, frac) / 100) * window.innerHeight
-          s.lenis.scrollTo(y, { immediate: true, force: true })
-        },
-        [target, frac ?? 0],
-      )
-      await page.waitForTimeout(1600)
-      await page.screenshot({ path: `${out}/${label}-${name}.jpg`, quality: 80 })
+    for (const [page, moments] of Object.entries(pages)) {
+      if (only && page !== only) continue
+      const tab = await browser.newPage({ viewport: size, isMobile, deviceScaleFactor })
+      const errors = []
+      tab.on('pageerror', (e) => errors.push(e.message))
+      await tab.goto(`http://localhost:${PORT}/${page === 'index' ? '' : `${page}.html`}`)
+      await tab.waitForSelector('html.is-ready', { timeout: 30000 })
+      await tab.waitForTimeout(1800)
+      for (const [name, target, frac] of moments) {
+        await tab.evaluate(
+          ([target, frac]) => {
+            const y = target.startsWith('#') || target.startsWith('.')
+              ? document.querySelector(target).getBoundingClientRect().top + window.scrollY
+              : (window.__story.at(target, frac) / 100) * window.innerHeight
+            window.scrollTo(0, y)
+          },
+          [target, frac ?? 0],
+        )
+        await tab.waitForTimeout(1500)
+        await tab.screenshot({ path: `${out}/${label}-${page}-${name}.jpg`, quality: 80 })
+      }
+      console.log(label, page, errors.length ? `page errors: ${errors.join(' | ')}` : 'no page errors')
+      await tab.close()
     }
-    console.log(label, errors.length ? `page errors: ${errors.join(' | ')}` : 'no page errors')
-    await page.close()
   }
 } finally {
   await browser.close()
