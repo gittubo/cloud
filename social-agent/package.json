@@ -1,0 +1,23 @@
+{
+  "name": "social-agent",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "AI agent that writes per-platform posts and schedules them for peak engagement on Instagram, Facebook, X, LinkedIn and TikTok",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "agent": "node src/cli.ts",
+    "test": "node --test \"test/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3"
+  }
+}

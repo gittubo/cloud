@@ -1,0 +1,24 @@
+{
+  "timeZone": "Africa/Lagos",
+  "brand": {
+    "name": "Your brand",
+    "voice": "Confident, warm and plain-spoken. No jargon, no hype words.",
+    "audience": "Who you are talking to: age, interests, what they care about",
+    "goal": "What a great post achieves for you, e.g. enquiries, followers, site visits"
+  },
+  "integrations": {
+    "instagram": "<postiz integration id>",
+    "facebook": "<postiz integration id>",
+    "x": "<postiz integration id>",
+    "linkedin": "<postiz integration id>",
+    "tiktok": "<postiz integration id>"
+  },
+  "settings": {
+    "linkedin": {}
+  },
+  "scheduling": {
+    "minLeadMinutes": 30,
+    "horizonDays": 7,
+    "minGapHours": 20
+  }
+}
