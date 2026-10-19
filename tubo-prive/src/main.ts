@@ -4,6 +4,7 @@
 import '@fontsource/anton/400.css'
 import '@fontsource-variable/cormorant-garamond'
 import '@fontsource-variable/manrope'
+import '@fontsource-variable/bodoni-moda/wght.css'
 import './styles.css'
 
 import gsap from 'gsap'
@@ -22,6 +23,17 @@ const $$ = <T extends Element = HTMLElement>(sel: string, root: ParentNode = doc
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const desktop = '(min-width: 961px)'
+let lenis: Lenis | null = null
+
+/** Wraps each character of el in <span class="ch" data-c="…"> and returns them. */
+function splitChars(el: HTMLElement): HTMLElement[] {
+  const chars = [...(el.textContent ?? '')].map((c) =>
+    Object.assign(document.createElement('span'), { className: 'ch', textContent: c }),
+  )
+  chars.forEach((c) => (c.dataset.c = c.textContent ?? ''))
+  el.replaceChildren(...chars)
+  return chars
+}
 
 // ---------- Contact placeholders ----------
 
@@ -148,52 +160,117 @@ function preload(seq: FrameSequence): Promise<void> {
   })
 }
 
+/** Gold name: letters, then the subtitle lines, then a sweep of light. */
+function luxTitle() {
+  const lux = $('.lux')
+  const chars = splitChars(lux)
+  const flare = lux.appendChild(Object.assign(document.createElement('span'), { className: 'lux__flare' }))
+  const subChars = splitChars($('.hero__sub-text'))
+  const lines = $$('.hero__sub i')
+  return { lux, chars, flare, subChars, lines }
+}
+
 function heroTimeline(film: { frame: number; zoom: number }, count: number): void {
+  const t = luxTitle()
+  gsap.set('.hero__title', { autoAlpha: 1 })
+  gsap.set(t.chars, { autoAlpha: 0, yPercent: 30, scale: 1.25, filter: 'blur(10px)' })
+  gsap.set(t.subChars, { autoAlpha: 0 })
+  gsap.set(t.lines, { scaleX: 0 })
+
   const tl = gsap.timeline({
     defaults: { ease: 'none' },
-    scrollTrigger: { trigger: '.hero', start: 'top top', end: '+=340%', scrub: 0.6, pin: '.hero__stage' },
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: '+=380%', scrub: 0.6, pin: '.hero__stage' },
   })
-  tl.to(film, { frame: count - 1, duration: 0.8 }, 0)
-    .to(film, { zoom: 1.08, duration: 1, ease: 'power1.in' }, 0)
+  tl.to(film, { frame: count - 1, duration: 0.72 }, 0)
+    .to(film, { zoom: 1.06, duration: 1, ease: 'power1.in' }, 0)
     .to('.cue', { autoAlpha: 0, duration: 0.05 }, 0)
-    .to('.hero__info', { autoAlpha: 0, y: -40, duration: 0.14 }, 0.5)
-    // Soften the lobby (and its wall sign) so the gold name reads cleanly over it.
-    .to('.hero__film', { opacity: 0.5, filter: 'blur(8px)', duration: 0.25 }, 0.68)
-    .fromTo(
-      '.hero__title',
-      { autoAlpha: 0, y: 80, scale: 0.86 },
-      { autoAlpha: 1, y: 0, scale: 1, duration: 0.24, ease: 'power2.out' },
-      0.7,
-    )
-    .to({}, { duration: 0.08 })
+    // The lobby stays sharp, only dimmed, so the gold reads against it.
+    .to('.hero__film', { opacity: 0.72, duration: 0.2 }, 0.5)
+    .to(t.chars, { autoAlpha: 1, yPercent: 0, scale: 1, filter: 'blur(0px)', stagger: 0.022, duration: 0.09, ease: 'power2.out' }, 0.52)
+    .to(t.lines, { scaleX: 1, duration: 0.1, ease: 'power2.out' }, 0.7)
+    .to(t.subChars, { autoAlpha: 1, stagger: 0.006, duration: 0.03 }, 0.72)
+    .fromTo(t.lux, { '--shine': '160%' }, { '--shine': '-60%', duration: 0.2, ease: 'power1.inOut' }, 0.78)
+    .fromTo(t.flare, { '--flare': '-10%' }, { '--flare': '110%', duration: 0.2, ease: 'power1.inOut' }, 0.78)
+    .to(t.flare, { opacity: 1, duration: 0.04 }, 0.78)
+    .to(t.flare, { opacity: 0, duration: 0.05 }, 0.93)
+    .to({}, { duration: 0.04 })
+
+  // Once the name is up, the gleam keeps passing over it every few seconds.
+  const idle = gsap.timeline({ repeat: -1, repeatDelay: 3.2, paused: true })
+  idle
+    .fromTo(t.lux, { '--shine': '160%' }, { '--shine': '-60%', duration: 1.4, ease: 'power1.inOut' }, 0)
+    .fromTo(t.flare, { '--flare': '-10%' }, { '--flare': '110%', duration: 1.4, ease: 'power1.inOut' }, 0)
+    .fromTo(t.flare, { opacity: 0 }, { opacity: 1, duration: 0.3, yoyo: true, repeat: 1, repeatDelay: 0.8 }, 0)
+  ScrollTrigger.create({
+    trigger: '.hero',
+    start: () => tl.scrollTrigger!.start + (tl.scrollTrigger!.end - tl.scrollTrigger!.start) * 0.98,
+    end: () => tl.scrollTrigger!.end + window.innerHeight,
+    onToggle: ({ isActive }) => (isActive ? idle.restart(true) : idle.pause()),
+  })
 }
 
 // ---------- Sections ----------
 
+/**
+ * Photos fly in from the right in groups, settle over the name, then blur
+ * away as the next group lands — on a loop while the section is on screen.
+ */
+function plates(): void {
+  const sets = $$('.plates__set').map((s) => $$('img', s))
+  let current = -1
+  let timer = 0
+
+  const land = (i: number) => {
+    const imgs = sets[i]
+    gsap.fromTo(
+      imgs,
+      { autoAlpha: 0, x: () => gsap.utils.random(260, 520), y: () => gsap.utils.random(-120, 160), rotation: () => gsap.utils.random(18, 40), scale: 1.18, filter: 'blur(10px)' },
+      { autoAlpha: 1, x: 0, y: 0, rotation: 0, scale: 1, filter: 'blur(0px)', duration: 1.1, stagger: 0.12, ease: 'power3.out', overwrite: true },
+    )
+  }
+  const leave = (i: number) => {
+    gsap.to(sets[i], {
+      autoAlpha: 0,
+      x: () => gsap.utils.random(-160, -60),
+      y: () => gsap.utils.random(-40, 60),
+      scale: 0.92,
+      filter: 'blur(12px)',
+      duration: 0.7,
+      stagger: 0.06,
+      ease: 'power2.in',
+      overwrite: true,
+    })
+  }
+  const next = () => {
+    if (current >= 0) leave(current)
+    current = (current + 1) % sets.length
+    gsap.delayedCall(current === 0 && timer === 0 ? 0 : 0.35, () => land(current))
+  }
+  const start = () => {
+    if (timer) return
+    next()
+    timer = window.setInterval(next, 3400)
+  }
+  const stop = () => {
+    clearInterval(timer)
+    timer = 0
+  }
+  ScrollTrigger.create({ trigger: '.intro', start: 'top 70%', end: 'bottom top', onToggle: ({ isActive }) => (isActive ? start() : stop()) })
+}
+
 function introTimeline(): void {
-  const fan = $$('.intro__fan img')
   const mm = gsap.matchMedia()
   mm.add(desktop, () => {
-    const tl = gsap.timeline({
-      defaults: { ease: 'power2.out' },
-      scrollTrigger: { trigger: '.intro', start: 'top top', end: '+=140%', scrub: 0.6, pin: '.intro__stage' },
-    })
-    tl.from('.intro__title span', { xPercent: -18, autoAlpha: 0, stagger: 0.12, duration: 0.4 }, 0)
-      .from(fan, { x: '55vw', y: 120, rotate: 28, autoAlpha: 0, stagger: 0.12, duration: 0.45 }, 0.1)
-      .from('.intro__card', { y: 60, autoAlpha: 0, duration: 0.3 }, 0.55)
-      .to({}, { duration: 0.2 })
+    gsap
+      .timeline({
+        defaults: { ease: 'power2.out' },
+        scrollTrigger: { trigger: '.intro', start: 'top top', end: '+=140%', scrub: 0.6, pin: '.intro__stage' },
+      })
+      .from('.intro__title span', { xPercent: -18, autoAlpha: 0, stagger: 0.12, duration: 0.4 }, 0)
+      .from('.intro__card', { y: 60, autoAlpha: 0, duration: 0.3 }, 0.45)
+      .to({}, { duration: 0.35 })
   })
-  mm.add('(max-width: 960px)', () => {
-    gsap.from(fan, {
-      x: 160,
-      rotate: 20,
-      autoAlpha: 0,
-      stagger: 0.1,
-      duration: 0.9,
-      ease: 'power3.out',
-      scrollTrigger: { trigger: '.intro__fan', start: 'top 85%' },
-    })
-  })
+  plates()
 }
 
 function socialTimeline(): void {
@@ -231,67 +308,84 @@ function socialTimeline(): void {
     .to(post, { scale: coverScale, y: centreShift, duration: 0.32, ease: 'power2.inOut' }, 0.58)
 }
 
+/**
+ * 3D gallery. Scroll first lifts the headline away and raises the deck, then
+ * walks it card by card: `pos` is the (fractional) index of the front card.
+ * Arrows and clicks jump the page to the matching scroll position.
+ */
 function deck(): void {
   const cards = $$('.deck__card')
   const n = cards.length
   const caption = $('.deck__caption')
   const index = $('.deck__index')
+  const bar = $('.deck__progress span')
   $('.deck__total').textContent = String(n).padStart(2, '0')
-  const state = { active: 0, spread: reducedMotion ? 1 : 0 }
+  const state = { pos: 0 }
+  let shown = -1
 
   const pose = (i: number) => {
-    let o = (i - state.active + n) % n
-    if (o > n / 2) o -= n // offsets run -2..3 around the front card
-    const s = state.spread
+    const o = i - state.pos
     const a = Math.abs(o)
+    const side = Math.sign(o)
     // -50 centres the card on the deck's midpoint (left/top: 50% in CSS).
     return {
-      xPercent: -50 + o * (58 * s + 4),
-      yPercent: -50 + a * (6 - 4 * s),
-      rotationY: -o * 16 * s,
-      rotation: o * 3 * (1 - s),
-      z: -a * (140 * s + 30),
-      scale: 1 - a * 0.04,
-      autoAlpha: a > 2.5 ? 0 : 1,
-      zIndex: n - a,
+      xPercent: -50 + side * Math.min(a, 3) * 52 - side * Math.max(0, a - 1) * 12,
+      yPercent: -50,
+      z: -Math.min(a, 3.5) * 260,
+      rotationY: -side * Math.min(a, 1) * 28,
+      scale: 1 - Math.min(a, 3) * 0.04,
+      autoAlpha: a > 3.2 ? 0 : 1 - Math.max(0, a - 1.8) * 0.6,
+      filter: `blur(${Math.max(0, a - 0.6) * 3.2}px) brightness(${1 - Math.min(a, 2) * 0.06})`,
+      zIndex: 40 - Math.round(a * 10),
     }
   }
-  const layout = (animate: boolean) => {
-    cards.forEach((c, i) => (animate ? gsap.to(c, { ...pose(i), duration: 0.8, ease: 'power3.out', overwrite: 'auto' }) : gsap.set(c, pose(i))))
-    caption.textContent = cards[state.active].dataset.caption ?? ''
-    index.textContent = String(state.active + 1).padStart(2, '0')
-  }
-  const go = (to: number) => {
-    state.active = (to + n) % n
-    layout(true)
+  const layout = () => {
+    cards.forEach((c, i) => gsap.set(c, pose(i)))
+    const active = Math.round(state.pos)
+    bar.style.transform = `scaleX(${n > 1 ? state.pos / (n - 1) : 1})`
+    if (active === shown) return
+    shown = active
+    caption.textContent = cards[active].dataset.caption ?? ''
+    index.textContent = String(active + 1).padStart(2, '0')
   }
 
-  for (const b of $$('.deck__arrows button')) b.addEventListener('click', () => go(state.active + Number(b.dataset.dir)))
+  // Where in the pinned scroll the walk-through starts (after the lift).
+  const WALK = 0.18
+  let trigger: ScrollTrigger | null = null
+  const go = (to: number) => {
+    const target = gsap.utils.clamp(0, n - 1, to)
+    if (trigger && lenis) {
+      const y = trigger.start + (trigger.end - trigger.start) * (WALK + (1 - WALK) * (target / (n - 1)))
+      lenis.scrollTo(y, { duration: 1.1 })
+    } else gsap.to(state, { pos: target, duration: 0.8, ease: 'power3.out', onUpdate: layout })
+  }
+
+  for (const b of $$('.deck__arrows button'))
+    b.addEventListener('click', () => go(Math.round(state.pos) + Number(b.dataset.dir)))
   cards.forEach((c, i) => c.addEventListener('click', () => go(i)))
   $('.deck').addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') go(state.active - 1)
-    if (e.key === 'ArrowRight') go(state.active + 1)
+    if (e.key === 'ArrowLeft') go(Math.round(state.pos) - 1)
+    if (e.key === 'ArrowRight') go(Math.round(state.pos) + 1)
   })
-  layout(false)
+  layout()
 
   if (reducedMotion) return
-  const mm = gsap.matchMedia()
-  mm.add(desktop, () => {
-    gsap.timeline({
-      scrollTrigger: { trigger: '.feature', start: 'top top', end: '+=120%', scrub: 0.6, pin: '.feature__stage' },
-    })
-      .from('.feature__copy > *', { y: 40, autoAlpha: 0, stagger: 0.08, duration: 0.3 }, 0)
-      .to(state, { spread: 1, duration: 0.7, ease: 'power1.inOut', onUpdate: () => layout(false) }, 0.15)
-      .to({}, { duration: 0.15 })
+  const tl = gsap.timeline({
+    defaults: { ease: 'none' },
+    scrollTrigger: {
+      trigger: '.feature',
+      start: 'top top',
+      end: () => `+=${n * 55}%`,
+      scrub: 0.6,
+      pin: '.feature__stage',
+      invalidateOnRefresh: true,
+    },
   })
-  mm.add('(max-width: 960px)', () => {
-    gsap.to(state, {
-      spread: 0.55,
-      ease: 'power1.out',
-      onUpdate: () => layout(false),
-      scrollTrigger: { trigger: '.deck', start: 'top 85%', end: 'center 50%', scrub: 0.6 },
-    })
-  })
+  tl.from('.feature__copy > *', { y: 40, autoAlpha: 0, stagger: 0.02, duration: 0.05, ease: 'power2.out' }, 0)
+    .fromTo('.deck', { y: () => window.innerHeight * 0.42 }, { y: 0, duration: WALK - 0.04, ease: 'power2.inOut' }, 0.04)
+    .to('.feature__copy', { y: () => -window.innerHeight * 0.35, autoAlpha: 0, duration: WALK - 0.06, ease: 'power2.in' }, 0.08)
+    .to(state, { pos: n - 1, duration: 1 - WALK, onUpdate: layout }, WALK)
+  trigger = tl.scrollTrigger!
 }
 
 function statement(): void {
@@ -351,9 +445,9 @@ function navState(): void {
 }
 
 function smoothScroll(): void {
-  const lenis = new Lenis({ lerp: 0.1 })
-  lenis.on('scroll', ScrollTrigger.update)
-  gsap.ticker.add((t) => lenis.raf(t * 1000))
+  const smooth = (lenis = new Lenis({ lerp: 0.1 }))
+  smooth.on('scroll', ScrollTrigger.update)
+  gsap.ticker.add((t) => smooth.raf(t * 1000))
   gsap.ticker.lagSmoothing(0)
   for (const a of $$<HTMLAnchorElement>('a[href^="#"]')) {
     a.addEventListener('click', (e) => {
@@ -362,7 +456,7 @@ function smoothScroll(): void {
       const target = id === '#top' ? 0 : document.querySelector<HTMLElement>(id)
       if (target === null) return
       e.preventDefault()
-      lenis.scrollTo(target, { offset: id === '#top' ? 0 : -64, duration: 1.6 })
+      smooth.scrollTo(target, { offset: id === '#top' ? 0 : -64, duration: 1.6 })
     })
   }
 }
@@ -378,6 +472,7 @@ async function main(): Promise<void> {
   seq.start()
 
   if (reducedMotion) {
+    luxTitle()
     statement()
     deck()
     film.frame = frames.count - 1

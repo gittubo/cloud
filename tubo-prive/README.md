@@ -5,10 +5,10 @@ One cinematic scroll story, modelled on the reference walkthrough:
 
 | # | Section | What happens |
 |---|---|---|
-| 01 | Hero | Scroll walks from the street through the glass doors into the lobby; the gold **Tubo Privé** name rises as the room softens |
-| 02 | Intro | Huge wine-to-gold name, treatment photos fan in, intro card |
+| 01 | Hero | Scroll walks from the street through the glass doors into the lobby; the polished-gold **TUBO PRIVÉ** builds letter by letter, the subtitle draws in between gold rules, and a gleam of light sweeps across (and repeats every few seconds) |
+| 02 | Intro | Huge wine-to-gold name; groups of treatment photos keep flying in over it and swapping on a loop |
 | 03 | Social | Dark moment: an Instagram-style post pops up over the sliding "Beauty clinic in Lagos" text, then opens out full screen |
-| 04 | Gallery | "Glow in 30 minutes!" with a 3D card deck that spreads as you scroll (arrows, click or ←/→ to browse) |
+| 04 | Gallery | "Glow in 30 minutes!" lifts away and a 3D coverflow takes over: scrolling walks it card by card, with caption, counter and progress bar (arrows, click or ←/→ jump to a card) |
 | 05 | Statement | Headline fills in word by word |
 | 06 | Reveal | Silver name on soft haze opens onto the facial film — "Golden hour in the treatment room" |
 | 07–09 | Treatments, Reviews, Visit | Menu, reviews, Lagos map, hours, contact and a booking form that sends to WhatsApp |

@@ -9,7 +9,7 @@ const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--stric
 const url = `http://localhost:${PORT}/`
 
 // Scroll positions in viewport heights.
-const stops = [0, 1.2, 2.4, 3.4, 4.6, 5.6, 6.6, 7.6, 8.6, 9.6, 10.6, 11.6, 12.8, 14, 15.4, 17, 19, 21]
+const stops = [0, 1.5, 2.6, 3.2, 3.8, 5.6, 6.4, 8, 9.4, 11, 11.8, 12.6, 13.6, 14.6, 15.6, 16.6, 18, 19.4, 21, 23, 25]
 const viewports = {
   desktop: { width: 1440, height: 900 },
   mobile: { width: 390, height: 844 },
