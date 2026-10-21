@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test Call</title>
+<style>
+  :root { --bg: #f6f7f9; --panel: #fff; --ink: #14181f; --muted: #5f6b7a; --line: #e3e6eb; --accent: #1f6feb; --seller: #eef2f7; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0d1117; --panel: #161b22; --ink: #e6edf3; --muted: #8d96a0; --line: #30363d; --accent: #4493f8; --seller: #1f2630; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .row > select, .row > input { flex: 1 1 180px; min-width: 0; }
+  select, input, button { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  button { cursor: pointer; background: var(--panel); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  #log { min-height: 280px; display: flex; flex-direction: column; gap: 8px; }
+  .msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; }
+  .agent { align-self: flex-start; border: 1px solid var(--line); }
+  .seller { align-self: flex-end; background: var(--seller); }
+  .muted { color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <div class="row" style="justify-content:space-between"><h1>📞 Test the Acquisition Manager</h1><a href="/">← Dashboard</a></div>
+  <p class="muted">You play the seller. Nothing is sent to anyone. Real Claude calls are made, so each turn costs a little API credit.</p>
+  <div class="panel">
+    <div class="row">
+      <select id="lead"><option value="">New caller (unknown property)</option></select>
+      <select id="mode"><option value="voice">Phone call (speaks out loud)</option><option value="sms">Text messages</option></select>
+      <button class="primary" id="start">Start</button>
+    </div>
+    <p class="muted" id="status"></p>
+  </div>
+  <div class="panel"><div id="log"></div></div>
+  <div class="panel row">
+    <input id="text" placeholder="Type what the seller says…" disabled>
+    <button id="mic" disabled title="Hold a conversation by voice (Chrome)">🎤 Speak</button>
+    <button class="primary" id="send" disabled>Send</button>
+  </div>
+</main>
+<script>
+let conv = null, mode = 'voice', busy = false;
+const $ = (id) => document.getElementById(id);
+const status = (t) => $('status').textContent = t;
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+async function api(path, body) {
+  const r = await fetch('/api/' + path, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json' }, body: body && JSON.stringify(body) });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error);
+  return j;
+}
+function add(from, text) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + from; d.textContent = text;
+  $('log').append(d); d.scrollIntoView({ block: 'end' });
+}
+function speak(text) {
+  if (mode !== 'voice' || !window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; speechSynthesis.speak(u);
+}
+function ready(on) { for (const id of ['text', 'send', 'mic']) $(id).disabled = !on; if (!Recognition) $('mic').disabled = true; }
+
+(async () => {
+  const s = await api('state');
+  if (!s.ai.enabled) status('Claude is off: start the app with ANTHROPIC_API_KEY set to talk to the Acquisition Manager.');
+  for (const l of s.leads.filter((l) => !l.doNotContact && l.address)) {
+    const o = document.createElement('option'); o.value = l.id; o.textContent = `${l.address}, ${l.city}: ${l.ownerName ?? ''}`; $('lead').append(o);
+  }
+})();
+
+$('start').onclick = async () => {
+  mode = $('mode').value; $('log').innerHTML = '';
+  const r = await api('converse/start', { leadId: $('lead').value || undefined, channel: mode });
+  conv = r.conversationId;
+  if (r.greeting) { add('agent', r.greeting); speak(r.greeting); status(''); }
+  else status('Text the agent first, as a seller replying to your marketing would.');
+  ready(true); $('text').focus();
+};
+
+async function send(text) {
+  if (!text || busy) return;
+  busy = true; ready(false); add('seller', text); $('text').value = ''; status('Agent is thinking…');
+  try {
+    const r = await api('converse', { conversationId: conv, text });
+    add('agent', r.reply); speak(r.reply);
+    status(r.ended ? 'Conversation ended. Check the dashboard Inbox.' : '');
+    ready(!r.ended);
+  } catch (e) { status(e.message); ready(true); }
+  busy = false;
+}
+$('send').onclick = () => send($('text').value.trim());
+$('text').onkeydown = (e) => { if (e.key === 'Enter') send($('text').value.trim()); };
+
+$('mic').onclick = () => {
+  if (!Recognition) return;
+  const rec = new Recognition(); rec.lang = 'en-US'; rec.interimResults = false;
+  status('Listening…');
+  rec.onresult = (e) => send(e.results[0][0].transcript);
+  rec.onerror = (e) => status('Mic: ' + e.error);
+  rec.start();
+};
+</script>
+</body>
+</html>

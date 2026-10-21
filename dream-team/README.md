@@ -1,11 +1,17 @@
 # AI Dream Team: wholesale real estate
 
-Six agents that take a US property list all the way to an assigned contract.
-Every text, email, offer and buyer blast they write waits in an **approval queue**:
-nothing reaches a seller or buyer until you approve it.
+Seven agents that take a US property list all the way to an assigned contract.
+
+The **Acquisition Manager** works on its own. It answers seller calls and texts 24/7,
+answers their questions, negotiates and gets a verbal "yes". It cannot commit you to
+anything: when a seller agrees, you get a **"Seller agreed at $X: send contract?"**
+alert, and one tap sends it.
+
+The other agents' messages wait in an **approval queue** until you approve them.
 
 | Agent | Replaces | What it does |
 |---|---|---|
+| **Acquisition Manager** (Claude) | ISA + acquisitions manager | Talks to sellers by phone or text, day and night. It builds rapport, answers questions ("how does this work?", "why less than Zillow?", "is this a scam?", "what's an assignment?"), qualifies the seller, makes the offer and handles counters. Price rules are enforced in code: it can only say numbers the Deal Analyst gives it, it never learns your MAO, and any agreement above MAO is refused. It says it's a virtual assistant, honours "stop" instantly and hands you anything it shouldn't handle (legal questions, upset sellers, missing comps). |
 | **Lead Scout** | list-stacking VA | Scores each property 0–100 for seller motivation: pre-foreclosure, tax-delinquent, probate, vacant, absentee, code violations, equity, years owned. Drops leads with too little equity to wholesale. |
 | **ISA** | inside sales / cold caller | Writes the first-touch text and a call script, then reads each seller reply and pulls out the five things you need before an offer: motivation, condition, timeline, asking price, occupancy. Keeps asking until it has them. |
 | **Deal Analyst** | acquisitions manager (numbers) | Picks sold comps (same zip, last 12 months, ±25% sqft, not distressed), computes ARV, estimates repairs from condition and age, and sets **MAO = ARV × 70% − repairs − your fee** plus an opening offer. Every number comes with the reasoning. |
@@ -31,14 +37,79 @@ Your data is saved to `dream-team/data/db.json`. Back that file up; it's git-ign
 
 ## Costs
 
-**The app is free.** All six agents run on built-in rules and message templates, so
-you don't need any paid tool or API key.
+| Part | Cost |
+|---|---|
+| Scout, Analyst, Negotiator drafts, Dispositions, TC, dashboard | Free. They run on built-in rules. |
+| **Acquisition Manager** (Claude) | Needs an Anthropic API key (`ANTHROPIC_API_KEY`). It runs on `claude-opus-5-5`, the strongest negotiator, at roughly **$0.20–$0.50 per conversation**. `DREAM_MODEL=claude-sonnet-5-5` costs about half that, and `claude-haiku-5-5` costs about 1–2 cents but negotiates noticeably worse. |
+| Phone line (Twilio) | A US number is about $1–2 a month. Calls and texts cost a few cents a minute or message. Check Twilio's current pricing. |
+| Always-on server | $0–6 a month (see below). |
+| Telegram alerts | Free. |
 
-**Optional: Claude rewrites the drafts.** Set `ANTHROPIC_API_KEY` before `npm start`
-and the ISA, Negotiator and Dispositions agents will have Claude polish each message.
-The numbers and the MAO cap stay rule-based either way. Each draft is a short request
-billed per token to your Anthropic account. Choose the model with `DREAM_MODEL`; it
-defaults to `claude-opus-5-5`, and `claude-haiku-5-5` is the cheapest.
+With an API key set, Claude also polishes the other agents' template drafts.
+
+## Try the Acquisition Manager now (no phone line needed)
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... npm start
+```
+
+Open **http://localhost:4321/call**. You play the seller: pick a sample lead or "New
+caller", choose **Phone call** or **Text messages**, and talk to it. In Chrome you can
+use the 🎤 button to speak and hear it reply. Try pushing back on price, asking
+"is this a scam?", or saying "stop". Every outcome lands in the dashboard **Inbox**.
+
+## Turn on the 24/7 phone line
+
+1. **Host it somewhere that stays on.** Twilio must reach the app while you sleep. You can
+   use a small VPS (around $4–6 a month) or any Node host with a persistent disk, so
+   `data/db.json` survives restarts. To test from your laptop, a free tunnel such as
+   `cloudflared tunnel --url http://localhost:4321` gives you a temporary public URL.
+2. **Create a Twilio account** and buy a US phone number with voice and SMS.
+3. **Start the app with:**
+   ```bash
+   ANTHROPIC_API_KEY=...          # Claude
+   PUBLIC_URL=https://your-app.example.com
+   DASHBOARD_PASSWORD=...         # required once the app is public
+   HOST=0.0.0.0                   # on a server
+   TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_PHONE_NUMBER=+1...
+   npm start
+   ```
+4. **In Twilio, set your number's webhooks.** Set "A call comes in" to
+   `https://your-app.example.com/twilio/voice` and "A message comes in" to
+   `https://your-app.example.com/twilio/sms` (both HTTP POST). The app rejects any
+   request that isn't signed by your Twilio account.
+5. **Texting US numbers from a business line requires A2P 10DLC registration** in Twilio.
+   Start it early, because approval takes time.
+
+Each phone turn takes a few seconds while Claude thinks. That's fine for
+acquisitions calls, and the voice is Twilio's built-in Amazon Polly voice.
+
+### What the AI may and may not do on the phone
+
+- **It answers every inbound call and text.** That covers sellers responding to your
+  mail, ads, signs or texts.
+- **It calls back only sellers who said yes** to "Is it OK if we call or text you at this
+  number?", and only between 8am and 9pm in the seller's time zone. Press **📞 AI calls
+  them back** on the lead.
+- **It never cold-calls lists.** US law (the TCPA) treats AI voices as "artificial voice"
+  calls that need the person's prior consent, with penalties of $500–$1,500 *per call*.
+  To reach new leads, use the approval-queue texts, mail or ads, and let the AI handle
+  whoever responds.
+
+## Get "seller agreed" alerts on your phone (free, via Telegram)
+
+1. In Telegram, message **@BotFather**, send `/newbot` and copy the token.
+2. Send any message to your new bot. Then open
+   `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy `"chat":{"id": ...}`.
+3. Start the app with `TELEGRAM_BOT_TOKEN=<TOKEN> TELEGRAM_CHAT_ID=<id>`.
+
+You'll get every alert on your phone. Deal alerts come with **✅ Send contract** and
+**❌ Decline** buttons, which work even when the app is on a laptop with no public address.
+
+Approving a deal fills in a purchase agreement (the **Open contract** link on the lead)
+and adds a task to send it for e-signature. Have a local attorney or title company
+approve the template first. Sending it through an e-signature service is still a manual
+step for now.
 
 ## Getting data without paying for tools
 
@@ -74,18 +145,27 @@ This tool does not give legal advice. Check your state's rules before you contra
 ## How it fits together
 
 ```
-CSV lists ──► Lead Scout ──► ISA ──► Deal Analyst ──► Negotiator ──► contract ──► TC + Dispositions
-                 score        drafts      ARV/MAO        drafts                       tasks + blasts
-                               │                          │                              │
-                               └──────────────► Approval queue (you) ◄───────────────────┘
+Seller calls/texts ──► Acquisition Manager (Claude) ──get_offer──► Deal Analyst + Negotiator rules
+     (Twilio)              │  answers, qualifies,                    (ARV, MAO, concession ladder)
+                           │  negotiates                                      │
+                           ▼                                                  │
+              "Seller agreed at $X" ──► you tap ✅ ──► contract ──► TC + Dispositions
+                (Inbox / Telegram)
+
+CSV lists ──► Lead Scout ──► ISA / Negotiator drafts ──► Approval queue (you)
 ```
 
 | Path | Contents |
 |---|---|
-| `src/agents/` | One file per agent, each pure logic you can test |
-| `src/team.ts` | Hands a lead from agent to agent and queues the drafts |
-| `src/llm.ts` | Optional Claude polish |
-| `src/server.ts` | The dashboard and JSON API |
+| `src/agents/acquisitions.ts` | The Acquisition Manager: the Claude conversation loop, its tools and the money rules |
+| `src/agents/knowledge.ts` | What it knows about how cash and assignment deals work |
+| `src/agents/` | The other agents, each pure logic you can test |
+| `src/phone.ts` | Twilio voice and SMS, signature checks, consented callbacks |
+| `src/notify.ts` | Inbox and Telegram alerts |
+| `src/contract.ts` | Purchase agreement draft |
+| `src/team.ts` | Hands a lead from agent to agent |
+| `src/server.ts` | The dashboard, JSON API and webhooks |
 | `public/index.html` | The dashboard |
+| `public/call.html` | The test-call page |
 
 The formula, the fee and the repair cost per sqft are all editable under **Settings**.

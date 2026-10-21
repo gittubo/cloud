@@ -12,10 +12,13 @@ export const DEFAULT_SETTINGS: Settings = {
   companyName: 'Your Company LLC',
   yourName: 'Your Name',
   callbackNumber: '(555) 555-0100',
+  agentName: 'Alex',
+  market: 'your area',
+  closeDays: 21,
 };
 
 export function emptyDb(): Db {
-  return { leads: [], comps: [], buyers: [], drafts: [], tasks: [], activity: [], settings: { ...DEFAULT_SETTINGS } };
+  return { leads: [], comps: [], buyers: [], drafts: [], tasks: [], activity: [], conversations: [], notifications: [], settings: { ...DEFAULT_SETTINGS } };
 }
 
 export function newId(prefix: string): string {

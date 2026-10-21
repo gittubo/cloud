@@ -21,6 +21,8 @@
   nav { display: flex; gap: 4px; flex-wrap: wrap; }
   nav button { background: none; border: 1px solid transparent; color: var(--muted); }
   nav button.on { border-color: var(--line); color: var(--ink); background: var(--bg); }
+  .navlink { padding: 6px 12px; color: var(--accent); text-decoration: none; }
+  details { padding: 6px 0; border-bottom: 1px solid var(--line); } summary { cursor: pointer; }
   main { padding: 16px; max-width: 1200px; margin: 0 auto; }
   button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -60,6 +62,7 @@
 <div id="toast"></div>
 <script>
 const AGENTS = {
+  acquisitions: ['Acquisition Manager', 'Answers calls & texts 24/7, answers seller questions, negotiates and gets the yes'],
   scout: ['Lead Scout', 'Ranks your lists by seller motivation and equity'],
   isa: ['ISA', 'First touch, then qualifies motivation, condition, timeline, price'],
   analyst: ['Deal Analyst', 'Comps → ARV → repairs → maximum allowable offer'],
@@ -68,7 +71,7 @@ const AGENTS = {
   coordinator: ['Transaction Coordinator', 'Contract → dated closing checklist'],
 };
 const STAGES = ['scored','contacted','qualified','analyzed','negotiating','contract','marketed','assigned','closed','dead','new'];
-let S = null, tab = 'pipeline', openLead = null;
+let S = null, tab = 'inbox', openLead = null;
 
 const $ = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content; };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -87,16 +90,40 @@ async function load() { S = await api('state'); render(); }
 function render() {
   const pending = S.drafts.filter((d) => d.status === 'pending').length;
   const openTasks = S.tasks.filter((t) => !t.done).length;
-  const tabs = [['pipeline', 'Pipeline'], ['approvals', `Approvals (${pending})`], ['tasks', `Tasks (${openTasks})`], ['buyers', 'Buyers'], ['import', 'Import'], ['settings', 'Settings']];
+  const inboxCount = S.notifications.filter((n) => n.status === 'open').length;
+  const tabs = [['inbox', `Inbox (${inboxCount})`], ['pipeline', 'Pipeline'], ['approvals', `Approvals (${pending})`], ['tasks', `Tasks (${openTasks})`], ['buyers', 'Buyers'], ['import', 'Import'], ['settings', 'Settings']];
   const nav = document.getElementById('tabs'); nav.innerHTML = '';
   for (const [k, label] of tabs) {
     const b = document.createElement('button'); b.textContent = label; b.className = k === tab ? 'on' : '';
     b.onclick = () => { tab = k; openLead = null; render(); }; nav.append(b);
   }
-  document.getElementById('ai').textContent = S.ai.enabled ? `Claude on · ${S.ai.model}` : 'Templates mode (no API key)';
+  const call = document.createElement('a'); call.href = '/call'; call.textContent = '📞 Test call'; call.className = 'navlink'; nav.append(call);
+  document.getElementById('ai').textContent = `${S.ai.enabled ? `Claude on · ${S.ai.model}` : 'Claude off (no API key)'} · ${S.phone ? 'Phone line on' : 'Phone line off'}`;
   const v = document.getElementById('view'); v.innerHTML = '';
-  v.append(openLead ? leadView(S.leads.find((l) => l.id === openLead)) : ({ pipeline, approvals, tasks, buyers, import: importView, settings })[tab]());
+  v.append(openLead ? leadView(S.leads.find((l) => l.id === openLead)) : ({ inbox, pipeline, approvals, tasks, buyers, import: importView, settings })[tab]());
   v.querySelectorAll('[data-act]').forEach((el) => el.onclick = handlers[el.dataset.act].bind(null, el));
+}
+
+function inbox() {
+  const open = S.notifications.filter((n) => n.status === 'open');
+  const icon = { deal_agreed: '🤝', escalation: '🙋', callback: '📅', info: 'ℹ️' };
+  const card = (n) => {
+    const lead = S.leads.find((l) => l.id === n.leadId);
+    const actions = n.kind === 'deal_agreed'
+      ? `<button class="primary" data-act="dealYes" data-id="${n.id}">✅ Send contract</button><button data-act="dealNo" data-id="${n.id}">❌ Decline</button>`
+      : `<button data-act="noteDone" data-id="${n.id}">Done</button>`;
+    return `<div class="draft"><div>${icon[n.kind]} ${esc(n.text)}</div><div class="muted">${new Date(n.createdAt).toLocaleString()}</div>
+      <div class="row">${actions}${lead ? `<button data-act="open" data-id="${lead.id}">Open lead</button>` : ''}</div></div>`;
+  };
+  const convs = S.conversations.slice(0, 15).map((c) => {
+    const lead = S.leads.find((l) => l.id === c.leadId);
+    return `<details><summary>${c.channel === 'voice' ? '📞' : '💬'} ${esc(lead?.address || lead?.ownerPhone || 'Unknown')} · ${c.transcript.length} messages · ${esc(c.status)}${c.outcome ? ' · ' + esc(c.outcome) : ''}${c.externalId === 'test' ? ' · test' : ''}</summary>
+      ${c.transcript.map((t) => `<div><b>${t.from === 'agent' ? S.settings.agentName : 'Seller'}:</b> ${esc(t.text)}</div>`).join('')}</details>`;
+  }).join('');
+  return $(`${S.leads.length ? '' : `<div class="panel"><h2>Your team is ready</h2><div class="team">${Object.values(AGENTS).map(([n, d]) => `<div class="agent"><b>${n}</b><span class="muted">${d}</span></div>`).join('')}</div>
+      <button class="primary" data-act="seed">Load sample data</button> <a href="/call">or test a call →</a></div>`}
+    <div class="panel"><h2>Needs you (${open.length})</h2>${open.map(card).join('') || '<p class="muted">Nothing needs you right now. The team is working.</p>'}</div>
+    <div class="panel"><h2>Recent conversations</h2>${convs || '<p class="muted">No calls or texts yet. Try one at <a href="/call">Test call</a>.</p>'}</div>`);
 }
 
 function pipeline() {
@@ -127,6 +154,9 @@ function leadView(l) {
     <div class="muted">${esc(l.ownerName ?? 'Unknown owner')} · ${esc(l.ownerPhone ?? 'no phone')} · ${[l.beds && l.beds + ' bd', l.baths && l.baths + ' ba', l.sqft && l.sqft + ' sqft', l.yearBuilt && 'built ' + l.yearBuilt].filter(Boolean).join(' · ')}</div>
     <div class="row"><span>Stage: <b>${esc(l.stage)}</b></span><span>Motivation: <b>${l.motivationScore ?? '–'}</b></span><span>Value: ${money(l.estimatedValue)} · Loan: ${money(l.mortgageBalance)}</span></div>
     ${(l.scoreReasons ?? []).map((r) => `<span class="pill">${esc(r)}</span>`).join('')}
+    ${l.doNotContact ? '<p class="pass"><b>Do not contact:</b> the seller opted out.</p>' : ''}
+    ${l.agreedPrice ? `<p class="strong"><b>Seller agreed at ${money(l.agreedPrice)}</b> · <a href="/contracts/${l.id}" target="_blank">Open contract</a></p>` : ''}
+    <div class="row">${l.consentToContact && !l.doNotContact ? `<button data-act="callback" data-id="${l.id}">📞 AI calls them back</button>` : '<span class="muted">The AI calls back only sellers who said it is OK.</span>'}</div>
   </div>
   <div class="grid">
     <div class="panel"><h2>1 · ISA: contact & qualify</h2>
@@ -199,7 +229,9 @@ function importView() {
 function settings() {
   const s = S.settings;
   const f = (k, label, type = 'text') => `<label>${label}<input id="set-${k}" type="${type}" value="${esc(s[k])}"></label>`;
-  return $(`<div class="panel"><h2>Your business</h2><div class="grid">${f('yourName', 'Your name')}${f('companyName', 'Company')}${f('callbackNumber', 'Callback number (US)')}</div></div>
+  return $(`<div class="panel"><h2>Your business</h2><div class="grid">${f('yourName', 'Your name')}${f('companyName', 'Company')}${f('callbackNumber', 'Callback number (US)')}${f('market', 'Where you buy (e.g. Memphis, TN)')}</div></div>
+    <div class="panel"><h2>Acquisition Manager</h2><div class="grid">${f('agentName', 'AI assistant name')}${f('closeDays', 'Typical days to close', 'number')}</div>
+    <p class="muted">The assistant always says it is a virtual assistant and never offers above your MAO.</p></div>
     <div class="panel"><h2>Offer formula</h2><p class="muted">MAO = ARV × % − repairs − assignment fee</p><div class="grid">${f('arvPercent', 'ARV % (0.70 = 70%)', 'number')}${f('defaultAssignmentFee', 'Assignment fee $', 'number')}</div>
     <h2 style="margin-top:14px">Repair cost per sqft</h2><div class="grid">${Object.entries(s.repairCostPerSqft).map(([k, v]) => `<label>${k}<input id="rep-${k}" type="number" value="${v}"></label>`).join('')}</div>
     <div class="row"><button class="primary" data-act="save">Save</button></div></div>`);
@@ -208,6 +240,10 @@ function settings() {
 const val = (id) => document.getElementById(id)?.value;
 const handlers = {
   seed: async () => { await act('seed'); toast('Sample data loaded and scored'); },
+  dealYes: async (el) => { const r = await api(`notifications/${el.dataset.id}/approve`, {}); toast(r.message); await load(); },
+  dealNo: async (el) => { const r = await api(`notifications/${el.dataset.id}/decline`, {}); toast(r.message); await load(); },
+  noteDone: (el) => act(`notifications/${el.dataset.id}/done`),
+  callback: async (el) => { await act(`leads/${el.dataset.id}/call`); toast('Calling the seller now'); },
   open: (el) => { openLead = el.dataset.id; render(); },
   back: () => { openLead = null; render(); },
   outreach: (el) => act(`leads/${el.dataset.id}/outreach`),
@@ -231,6 +267,7 @@ const handlers = {
     const s = S.settings, rep = {};
     for (const k of Object.keys(s.repairCostPerSqft)) rep[k] = Number(val('rep-' + k));
     await act('settings', { yourName: val('set-yourName'), companyName: val('set-companyName'), callbackNumber: val('set-callbackNumber'),
+      market: val('set-market'), agentName: val('set-agentName'), closeDays: Number(val('set-closeDays')),
       arvPercent: Number(val('set-arvPercent')), defaultAssignmentFee: Number(val('set-defaultAssignmentFee')), repairCostPerSqft: rep });
     toast('Saved');
   },

@@ -2,7 +2,7 @@
   "name": "ai-dream-team",
   "private": true,
   "version": "0.1.0",
-  "description": "AI agents that find, analyze, negotiate and dispose of US wholesale real estate deals, with every outbound message held for your approval.",
+  "description": "AI agents that find, analyze, negotiate and dispose of US wholesale real estate deals, including a 24/7 AI acquisition manager that talks to sellers by phone and text.",
   "type": "module",
   "engines": {
     "node": ">=22.18"

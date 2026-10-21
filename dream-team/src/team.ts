@@ -180,6 +180,27 @@ export function approveDraft(store: Store, draftId: string, editedBody?: string)
   store.log('you', `Approved ${d.agent} ${d.channel}${d.to ? ` to ${d.to}` : ''}.`, d.leadId);
 }
 
+/** Your tap on a "seller agreed" notification (dashboard or Telegram). Returns a status line. */
+export async function decideDeal(store: Store, notificationId: string, approve: boolean): Promise<string> {
+  const n = store.db.notifications.find((x) => x.id === notificationId);
+  if (!n || n.kind !== 'deal_agreed' || !n.leadId) throw new Error('No such deal notification.');
+  if (n.status !== 'open') return `Already ${n.status}.`;
+  const lead = store.lead(n.leadId);
+  const price = lead.agreedPrice!;
+  if (!approve) {
+    n.status = 'declined';
+    store.addTask({ leadId: lead.id, title: `You declined the $${price.toLocaleString()} deal on ${lead.address}: call the seller back to explain` });
+    store.log('you', `Declined the verbal agreement at $${price.toLocaleString()}.`, lead.id);
+    return `Declined. A task was added to call ${lead.ownerName ?? 'the seller'} back.`;
+  }
+  n.status = 'approved';
+  if (lead.negotiation) lead.negotiation.ourLastOffer = price;
+  store.addTask({ leadId: lead.id, title: `Send the purchase agreement (Contract button on the lead) to ${lead.ownerEmail ?? 'the seller'} for e-signature at $${price.toLocaleString()}` });
+  store.addTask({ leadId: lead.id, title: 'When the seller signs, click "Contract signed" to start the closing checklist and buyer blast' });
+  store.log('you', `Approved the deal at $${price.toLocaleString()}. Contract ready.`, lead.id);
+  return `Approved. The contract for ${lead.address} at $${price.toLocaleString()} is ready in your dashboard${lead.ownerEmail ? ` to send to ${lead.ownerEmail}` : ''}.`;
+}
+
 export function rejectDraft(store: Store, draftId: string): void {
   const d = store.db.drafts.find((x) => x.id === draftId);
   if (!d) throw new Error(`No draft ${draftId}`);

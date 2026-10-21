@@ -2,10 +2,10 @@
 // template draft first, and Claude only rewrites that draft when ANTHROPIC_API_KEY is set.
 import Anthropic from '@anthropic-ai/sdk';
 
-const MODEL = process.env.DREAM_MODEL || 'claude-opus-5-5';
+export const MODEL = process.env.DREAM_MODEL || 'claude-opus-5-5';
 let client: Anthropic | null | undefined;
 
-function getClient(): Anthropic | null {
+export function getClient(): Anthropic | null {
   if (client === undefined) client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
   return client;
 }

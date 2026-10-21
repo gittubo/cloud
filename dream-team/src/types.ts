@@ -44,6 +44,12 @@ export interface Lead {
   negotiation?: NegotiationState;
   contractSignedAt?: string;
   closingDate?: string;
+  /** Price the seller verbally agreed to with the Acquisition Manager, waiting on your tap to send the contract. */
+  agreedPrice?: number;
+  /** Seller said it's OK to call/text them at this number (required before any AI callback). */
+  consentToContact?: boolean;
+  /** Seller asked not to be contacted again. Nothing is ever sent to this lead. */
+  doNotContact?: boolean;
   notes: string[];
   createdAt: string;
   updatedAt: string;
@@ -102,7 +108,33 @@ export interface Buyer {
   lastPurchase?: string;
 }
 
-export type AgentName = 'scout' | 'isa' | 'analyst' | 'negotiator' | 'dispositions' | 'coordinator';
+export type AgentName = 'scout' | 'isa' | 'analyst' | 'negotiator' | 'dispositions' | 'coordinator' | 'acquisitions';
+
+/** A live seller conversation run by the AI Acquisition Manager (phone call, SMS thread or browser test). */
+export interface Conversation {
+  id: string;
+  leadId: string;
+  channel: 'voice' | 'sms' | 'web';
+  /** Twilio CallSid for voice calls, so each webhook finds its call. */
+  externalId?: string;
+  transcript: { at: string; from: 'seller' | 'agent'; text: string }[];
+  /** Claude message history, kept exactly as returned (append-only) so thinking blocks stay valid. */
+  api: unknown[];
+  status: 'active' | 'ended';
+  outcome?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Something the team needs you for. Sent to Telegram when configured. */
+export interface Notification {
+  id: string;
+  leadId?: string;
+  kind: 'deal_agreed' | 'escalation' | 'callback' | 'info';
+  text: string;
+  status: 'open' | 'approved' | 'declined' | 'done';
+  createdAt: string;
+}
 
 /** Anything that would reach a seller or buyer waits here until a human approves it. */
 export interface Draft {
@@ -134,6 +166,12 @@ export interface Settings {
   companyName: string;
   yourName: string;
   callbackNumber: string;
+  /** The name the AI Acquisition Manager introduces itself with. It always says it's a virtual assistant. */
+  agentName: string;
+  /** City/area you buy in, used in the AI's greeting and answers. */
+  market: string;
+  /** Typical days to close, quoted to sellers. */
+  closeDays: number;
 }
 
 export interface Activity {
@@ -150,5 +188,7 @@ export interface Db {
   drafts: Draft[];
   tasks: Task[];
   activity: Activity[];
+  conversations: Conversation[];
+  notifications: Notification[];
   settings: Settings;
 }
