@@ -1,0 +1,7 @@
+Address,City,State,Zip,Owner Name,Phone,Email,Mailing Address,Beds,Baths,Sqft,Year Built,Estimated Value,Mortgage Balance,Last Sale Date,Last Sale Price,Lists
+1420 Sample Maple Ave,Memphis,TN,38109,Dorothy Example,(555) 010-0101,,1420 Sample Maple Ave,3,1,1150,1958,118000,22000,1996-05-10,54000,Pre-Foreclosure; Vacant
+88 Demo Oak St,Memphis,TN,38109,Harold Testcase,(555) 010-0102,,PO Box 77 Dallas TX,3,2,1320,1972,135000,0,2004-08-21,71000,Absentee; Tax Delinquent; Free and Clear
+2203 Placeholder Rd,Memphis,TN,38127,Estate of Ruth Sample,(555) 010-0103,,,4,2,1600,1965,152000,0,1988-02-14,48000,Probate; Vacant
+517 Fictional Ln,Memphis,TN,38127,Marcus Notreal,(555) 010-0104,,517 Fictional Ln,3,2,1400,2001,160000,151000,2019-06-30,149000,Pre-Foreclosure
+930 Mockingbird Way,Memphis,TN,38109,Linda Placeholder,,,,2,1,950,1949,92000,15000,1999-11-02,38000,Code Violation; Tired Landlord
+12 Sandbox Ct,Memphis,TN,38118,Kevin Dummy,(555) 010-0106,kevin@example.com,4400 Elsewhere Blvd Atlanta GA,3,2,1250,1985,140000,40000,2012-03-03,95000,Absentee; High Equity

@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Dream Team</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --ink: #14181f; --muted: #5f6b7a; --line: #e3e6eb;
+    --accent: #1f6feb; --good: #1a7f37; --warn: #9a6700; --bad: #cf222e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0d1117; --panel: #161b22; --ink: #e6edf3; --muted: #8d96a0; --line: #30363d;
+      --accent: #4493f8; --good: #3fb950; --warn: #d29922; --bad: #f85149; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  h1 { font-size: 18px; margin: 0; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  nav button { background: none; border: 1px solid transparent; color: var(--muted); }
+  nav button.on { border-color: var(--line); color: var(--ink); background: var(--bg); }
+  main { padding: 16px; max-width: 1200px; margin: 0 auto; }
+  button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  input, textarea, select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
+  textarea { min-height: 90px; resize: vertical; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); }
+  .muted { color: var(--muted); }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); margin: 0 4px 4px 0; }
+  .score { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .strong { color: var(--good); } .workable { color: var(--warn); } .pass { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr.click { cursor: pointer; } tr.click:hover { background: var(--bg); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+  .row > * { flex: 1 1 140px; }
+  .row > button { flex: 0 0 auto; }
+  .team { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 12px; }
+  .agent { border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  .agent b { display: block; }
+  .draft { border-left: 3px solid var(--accent); padding-left: 10px; margin-bottom: 14px; }
+  .stats { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); margin-bottom: 14px; }
+  .stats .panel { margin: 0; }
+  .stat { font-size: 22px; font-weight: 700; }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; display: none; }
+  .table-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏠 AI Dream Team</h1>
+  <nav id="tabs"></nav>
+  <span id="ai" class="muted"></span>
+</header>
+<main id="view"></main>
+<div id="toast"></div>
+<script>
+const AGENTS = {
+  scout: ['Lead Scout', 'Ranks your lists by seller motivation and equity'],
+  isa: ['ISA', 'First touch, then qualifies motivation, condition, timeline, price'],
+  analyst: ['Deal Analyst', 'Comps → ARV → repairs → maximum allowable offer'],
+  negotiator: ['Negotiator', 'Offers, counters, objections. Never above MAO'],
+  dispositions: ['Dispositions', 'Matches cash buyers and writes the deal blast'],
+  coordinator: ['Transaction Coordinator', 'Contract → dated closing checklist'],
+};
+const STAGES = ['scored','contacted','qualified','analyzed','negotiating','contract','marketed','assigned','closed','dead','new'];
+let S = null, tab = 'pipeline', openLead = null;
+
+const $ = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content; };
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const money = (n) => n == null ? '–' : '$' + Number(n).toLocaleString();
+function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 2500); }
+
+async function api(path, body, raw) {
+  const r = await fetch('/api/' + path, { method: body === undefined ? 'GET' : 'POST', headers: { 'content-type': raw ? 'text/csv' : 'application/json' }, body: raw ? body : body === undefined ? undefined : JSON.stringify(body) });
+  const j = await r.json();
+  if (!r.ok) { toast(j.error); throw new Error(j.error); }
+  return j;
+}
+async function act(path, body) { await api(path, body ?? {}); await load(); }
+async function load() { S = await api('state'); render(); }
+
+function render() {
+  const pending = S.drafts.filter((d) => d.status === 'pending').length;
+  const openTasks = S.tasks.filter((t) => !t.done).length;
+  const tabs = [['pipeline', 'Pipeline'], ['approvals', `Approvals (${pending})`], ['tasks', `Tasks (${openTasks})`], ['buyers', 'Buyers'], ['import', 'Import'], ['settings', 'Settings']];
+  const nav = document.getElementById('tabs'); nav.innerHTML = '';
+  for (const [k, label] of tabs) {
+    const b = document.createElement('button'); b.textContent = label; b.className = k === tab ? 'on' : '';
+    b.onclick = () => { tab = k; openLead = null; render(); }; nav.append(b);
+  }
+  document.getElementById('ai').textContent = S.ai.enabled ? `Claude on · ${S.ai.model}` : 'Templates mode (no API key)';
+  const v = document.getElementById('view'); v.innerHTML = '';
+  v.append(openLead ? leadView(S.leads.find((l) => l.id === openLead)) : ({ pipeline, approvals, tasks, buyers, import: importView, settings })[tab]());
+  v.querySelectorAll('[data-act]').forEach((el) => el.onclick = handlers[el.dataset.act].bind(null, el));
+}
+
+function pipeline() {
+  const leads = [...S.leads].sort((a, b) => STAGES.indexOf(a.stage) - STAGES.indexOf(b.stage) || (b.motivationScore ?? 0) - (a.motivationScore ?? 0));
+  const count = (st) => S.leads.filter((l) => l.stage === st).length;
+  const team = Object.values(AGENTS).map(([n, d]) => `<div class="agent"><b>${n}</b><span class="muted">${d}</span></div>`).join('');
+  if (!leads.length) return $(`<div class="panel"><h2>Your team is ready</h2><div class="team">${team}</div>
+    <p>Import a list on the <b>Import</b> tab, or try it with sample data first.</p><button class="primary" data-act="seed">Load sample data</button></div>`);
+  const rows = leads.map((l) => `<tr class="click" data-act="open" data-id="${l.id}">
+    <td><b>${esc(l.address)}</b><br><span class="muted">${esc(l.city)}, ${esc(l.state)} ${esc(l.zip)}</span></td>
+    <td class="score">${l.motivationScore ?? '–'}</td>
+    <td>${l.tags.map((t) => `<span class="pill">${esc(t)}</span>`).join('')}</td>
+    <td>${esc(l.stage)}</td>
+    <td>${l.analysis ? `<span class="${l.analysis.verdict}">${money(l.analysis.mao)}</span>` : '–'}</td></tr>`).join('');
+  return $(`<div class="stats">
+      ${['scored','negotiating','contract','marketed'].map((s) => `<div class="panel"><div class="muted">${s}</div><div class="stat">${count(s)}</div></div>`).join('')}
+    </div>
+    <div class="panel"><h2>Leads <span class="muted">(by stage, then motivation score)</span></h2><div class="table-wrap"><table>
+    <tr><th>Property</th><th>Score</th><th>Signals</th><th>Stage</th><th>MAO</th></tr>${rows}</table></div></div>
+    <div class="panel"><h2>Team activity</h2>${S.activity.slice(0, 15).map((a) => `<div><span class="pill">${esc(AGENTS[a.agent]?.[0] ?? 'You')}</span>${esc(a.text)}</div>`).join('')}</div>`);
+}
+
+function leadView(l) {
+  const a = l.analysis, q = l.qualification, n = l.negotiation;
+  const drafts = S.drafts.filter((d) => d.leadId === l.id && d.status === 'pending');
+  return $(`<div class="row"><button data-act="back">← Back</button></div>
+  <div class="panel"><h2>${esc(l.address)}, ${esc(l.city)} ${esc(l.state)} ${esc(l.zip)}</h2>
+    <div class="muted">${esc(l.ownerName ?? 'Unknown owner')} · ${esc(l.ownerPhone ?? 'no phone')} · ${[l.beds && l.beds + ' bd', l.baths && l.baths + ' ba', l.sqft && l.sqft + ' sqft', l.yearBuilt && 'built ' + l.yearBuilt].filter(Boolean).join(' · ')}</div>
+    <div class="row"><span>Stage: <b>${esc(l.stage)}</b></span><span>Motivation: <b>${l.motivationScore ?? '–'}</b></span><span>Value: ${money(l.estimatedValue)} · Loan: ${money(l.mortgageBalance)}</span></div>
+    ${(l.scoreReasons ?? []).map((r) => `<span class="pill">${esc(r)}</span>`).join('')}
+  </div>
+  <div class="grid">
+    <div class="panel"><h2>1 · ISA: contact & qualify</h2>
+      <button data-act="outreach" data-id="${l.id}">Draft first touch + call script</button>
+      <p class="muted">Paste what the seller said (text, call notes). The ISA pulls out price, condition, timeline, occupancy and motivation. Once you've made an offer, replies go to the Negotiator.</p>
+      <textarea id="reply" placeholder="e.g. Roof leaks and it needs everything. Tenant moved out. I'd take 85k if you can close in 30 days."></textarea>
+      <div class="row"><button class="primary" data-act="reply" data-id="${l.id}">${l.stage === 'negotiating' ? 'Send to Negotiator' : 'Send to ISA'}</button></div>
+      ${q ? `<table>${['motivation','condition','timeline','askingPrice','occupancy'].map((k) => `<tr><td class="muted">${k}</td><td>${esc(k === 'askingPrice' ? (q[k] ? money(q[k]) : '?') : q[k] ?? '?')}</td></tr>`).join('')}</table>` : ''}
+    </div>
+    <div class="panel"><h2>2 · Deal Analyst</h2>
+      <button data-act="analyze" data-id="${l.id}">${a ? 'Re-run' : 'Run'} numbers</button>
+      ${a ? `<div class="row"><span>ARV <b>${money(a.arv)}</b> <span class="muted">(${a.arvConfidence})</span></span><span>Repairs <b>${money(a.repairEstimate)}</b></span></div>
+        <div class="row"><span>MAO <b class="${a.verdict}">${money(a.mao)}</b></span><span>Open at <b>${money(a.openingOffer)}</b></span><span class="${a.verdict}"><b>${a.verdict.toUpperCase()}</b></span></div>
+        ${a.explanation.map((e) => `<div class="muted">• ${esc(e)}</div>`).join('')}
+        ${a.compsUsed.length ? `<details><summary>Comps used (${a.compsUsed.length})</summary>${a.compsUsed.map((c) => `<div>${esc(c)}</div>`).join('')}</details>` : ''}` : ''}
+      <div class="row"><select id="cond"><option value="">Condition…</option>${['turnkey','light','medium','heavy','teardown'].map((c) => `<option ${q?.condition === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+        <input id="ask" type="number" placeholder="Asking price" value="${q?.askingPrice ?? ''}"><button data-act="qual" data-id="${l.id}">Update</button></div>
+    </div>
+    <div class="panel"><h2>3 · Negotiator</h2>
+      <div class="row"><input id="offer" type="number" placeholder="Offer (blank = analyst's opening)"><button class="primary" data-act="offer" data-id="${l.id}" ${a && a.mao > 0 ? '' : 'disabled'}>Draft offer</button></div>
+      ${n ? `<p>Round ${n.round} · our last offer <b>${money(n.ourLastOffer)}</b>${n.sellerLastAsk ? ` · seller wants <b>${money(n.sellerLastAsk)}</b>` : ''}</p>
+        ${n.history.map((h) => `<div class="muted">${h.party === 'us' ? '🟦 Us' : '🟧 Seller'} ${h.amount ? money(h.amount) : ''}: ${esc(h.text)}</div>`).join('')}` : '<p class="muted">Run the numbers first. Seller counters and objections go in the box under step 1.</p>'}
+    </div>
+    <div class="panel"><h2>4 · Contract → TC + Dispositions</h2>
+      <div class="row"><input id="cprice" type="number" placeholder="Contract price" value="${n?.ourLastOffer ?? ''}"><input id="cdate" type="date"></div>
+      <button class="primary" data-act="contract" data-id="${l.id}">Contract signed</button>
+      <p class="muted">Creates the closing checklist and drafts the buyer blast to matched cash buyers.</p>
+    </div>
+  </div>
+  <div class="panel"><h2>Waiting for your approval (${drafts.length})</h2>${drafts.map(draftCard).join('') || '<p class="muted">Nothing pending.</p>'}</div>
+  <div class="panel"><h2>Notes</h2>${l.notes.map((x) => `<div>${esc(x)}</div>`).join('') || '<p class="muted">None.</p>'}
+    <div class="row"><select id="stage">${STAGES.map((s) => `<option ${s === l.stage ? 'selected' : ''}>${s}</option>`).join('')}</select><button data-act="stage" data-id="${l.id}">Move stage</button></div></div>`);
+}
+
+function draftCard(d) {
+  const lead = S.leads.find((l) => l.id === d.leadId);
+  return `<div class="draft"><div class="row"><span><span class="pill">${esc(AGENTS[d.agent][0])}</span><b>${esc(d.channel)}</b> ${d.to ? 'to ' + esc(d.to) : ''} <span class="muted">· ${esc(lead?.address)}</span></span></div>
+    <textarea id="body-${d.id}">${esc(d.body)}</textarea>
+    <div class="row"><button class="primary" data-act="approve" data-id="${d.id}">Approve & copy</button><button data-act="reject" data-id="${d.id}">Reject</button></div></div>`;
+}
+
+function approvals() {
+  const pending = S.drafts.filter((d) => d.status === 'pending');
+  return $(`<div class="panel"><h2>Approval queue</h2><p class="muted">Nothing goes to a seller or buyer until you approve it. Approving copies the message so you can paste it into your texting app, email or dialer.</p>
+    ${pending.map(draftCard).join('') || '<p>All caught up.</p>'}</div>`);
+}
+
+function tasks() {
+  const list = [...S.tasks].sort((a, b) => Number(a.done) - Number(b.done) || (a.due ?? '').localeCompare(b.due ?? ''));
+  return $(`<div class="panel"><h2>Tasks</h2><div class="table-wrap"><table>${list.map((t) => `<tr><td><input type="checkbox" style="width:auto" ${t.done ? 'checked' : ''} data-act="task" data-id="${t.id}"></td>
+    <td>${t.done ? `<s class="muted">${esc(t.title)}</s>` : esc(t.title)}<br><span class="muted">${esc(S.leads.find((l) => l.id === t.leadId)?.address)}</span></td><td>${esc(t.due ?? '')}</td></tr>`).join('') || '<tr><td>No tasks yet.</td></tr>'}</table></div></div>`);
+}
+
+function buyers() {
+  return $(`<div class="panel"><h2>Cash buyers (${S.buyers.length})</h2><div class="table-wrap"><table><tr><th>Name</th><th>Contact</th><th>Zips</th><th>Max</th><th>Last buy</th></tr>
+    ${S.buyers.map((b) => `<tr><td>${esc(b.name)}</td><td>${esc(b.phone ?? b.email ?? '')}</td><td>${esc(b.zips.join(', '))}</td><td>${money(b.maxPrice)}</td><td>${esc(b.lastPurchase ?? '')}</td></tr>`).join('')}</table></div>
+    <p class="muted">Import more on the Import tab.</p></div>`);
+}
+
+function importView() {
+  return $(`<div class="grid">
+    ${[['leads', 'Leads / property lists', 'From Propwire (free), county tax-delinquent or foreclosure lists, PropStream, DealMachine, etc. Columns like Address, City, State, Zip, Owner Name, Phone, Beds, Sqft, Estimated Value, Mortgage Balance, plus Yes/No columns or a "Lists" column for Pre-Foreclosure, Vacant, Probate…'],
+       ['comps', 'Sold comps', 'Address, Zip, Sold Price, Sold Date, Sqft, Beds, Baths, Condition (renovated / average / distressed). Copy recent sales from Redfin or Zillow "Sold" filters.'],
+       ['buyers', 'Cash buyers', 'Name, Phone, Email, Zips (separated by ;), Max Price, Min Beds, Strategies, Last Purchase.']]
+      .map(([k, t, d]) => `<div class="panel"><h2>${t}</h2><p class="muted">${d}</p>${k === 'leads' ? '<input id="src" placeholder="Source name (e.g. propwire-38109)">' : ''}
+        <div class="row"><input type="file" accept=".csv" id="file-${k}"><button class="primary" data-act="import" data-kind="${k}">Import</button></div></div>`).join('')}
+    <div class="panel"><h2>Sample data</h2><p class="muted">6 synthetic leads, 9 comps and 4 buyers to try the full pipeline.</p><button data-act="seed">Load sample data</button></div></div>`);
+}
+
+function settings() {
+  const s = S.settings;
+  const f = (k, label, type = 'text') => `<label>${label}<input id="set-${k}" type="${type}" value="${esc(s[k])}"></label>`;
+  return $(`<div class="panel"><h2>Your business</h2><div class="grid">${f('yourName', 'Your name')}${f('companyName', 'Company')}${f('callbackNumber', 'Callback number (US)')}</div></div>
+    <div class="panel"><h2>Offer formula</h2><p class="muted">MAO = ARV × % − repairs − assignment fee</p><div class="grid">${f('arvPercent', 'ARV % (0.70 = 70%)', 'number')}${f('defaultAssignmentFee', 'Assignment fee $', 'number')}</div>
+    <h2 style="margin-top:14px">Repair cost per sqft</h2><div class="grid">${Object.entries(s.repairCostPerSqft).map(([k, v]) => `<label>${k}<input id="rep-${k}" type="number" value="${v}"></label>`).join('')}</div>
+    <div class="row"><button class="primary" data-act="save">Save</button></div></div>`);
+}
+
+const val = (id) => document.getElementById(id)?.value;
+const handlers = {
+  seed: async () => { await act('seed'); toast('Sample data loaded and scored'); },
+  open: (el) => { openLead = el.dataset.id; render(); },
+  back: () => { openLead = null; render(); },
+  outreach: (el) => act(`leads/${el.dataset.id}/outreach`),
+  reply: async (el) => { const text = val('reply'); if (!text) return; await act(`leads/${el.dataset.id}/reply`, { text }); },
+  analyze: (el) => act(`leads/${el.dataset.id}/analyze`),
+  qual: (el) => { const b = {}; if (val('cond')) b.condition = val('cond'); if (val('ask')) b.askingPrice = Number(val('ask')); return act(`leads/${el.dataset.id}/qualification`, b); },
+  offer: (el) => act(`leads/${el.dataset.id}/offer`, { amount: Number(val('offer')) || undefined }),
+  contract: (el) => { if (!val('cprice') || !val('cdate')) return toast('Enter contract price and closing date'); return act(`leads/${el.dataset.id}/contract`, { price: Number(val('cprice')), closingDate: val('cdate') }); },
+  stage: (el) => act(`leads/${el.dataset.id}/stage`, { stage: val('stage') }),
+  approve: async (el) => { const body = val('body-' + el.dataset.id); try { await navigator.clipboard.writeText(body); } catch {} await act(`drafts/${el.dataset.id}/approve`, { body }); toast('Approved and copied'); },
+  reject: (el) => act(`drafts/${el.dataset.id}/reject`),
+  task: (el) => act(`tasks/${el.dataset.id}/toggle`),
+  import: async (el) => {
+    const k = el.dataset.kind, file = document.getElementById('file-' + k).files[0];
+    if (!file) return toast('Choose a CSV file first');
+    const q = k === 'leads' ? `?source=${encodeURIComponent(val('src') || file.name)}` : '';
+    const r = await api(`import/${k}${q}`, await file.text(), true);
+    toast(`Imported ${r.imported} ${k}`); await load();
+  },
+  save: async () => {
+    const s = S.settings, rep = {};
+    for (const k of Object.keys(s.repairCostPerSqft)) rep[k] = Number(val('rep-' + k));
+    await act('settings', { yourName: val('set-yourName'), companyName: val('set-companyName'), callbackNumber: val('set-callbackNumber'),
+      arvPercent: Number(val('set-arvPercent')), defaultAssignmentFee: Number(val('set-defaultAssignmentFee')), repairCostPerSqft: rep });
+    toast('Saved');
+  },
+};
+load();
+</script>
+</body>
+</html>
