@@ -53,6 +53,13 @@ export function scoreLead(lead: Lead, today = new Date()): Score {
 
   if (lead.yearBuilt && lead.yearBuilt < 1960) { score += 5; reasons.push(`built ${lead.yearBuilt}, likely dated (+5)`); }
 
+  // Atlas saw the house looking run down from the street.
+  if (lead.visual?.usable && lead.visual.score >= 4) {
+    const pts = lead.visual.score >= 8 ? 30 : lead.visual.score >= 6 ? 20 : 8;
+    score += pts;
+    reasons.push(`looks distressed from the street, ${lead.visual.score}/10 (+${pts})`);
+  }
+
   if (!lead.ownerPhone && !lead.ownerEmail) {
     score -= 10;
     reasons.push('no phone or email yet, needs skip tracing (-10)');

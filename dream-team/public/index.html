@@ -22,6 +22,10 @@
   nav button { background: none; border: 1px solid transparent; color: var(--muted); }
   nav button.on { border-color: var(--line); color: var(--ink); background: var(--bg); }
   .navlink { padding: 6px 12px; color: var(--accent); text-decoration: none; }
+  .house { display: grid; grid-template-columns: 160px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .house img { width: 160px; height: 160px; object-fit: cover; border-radius: 8px; background: var(--bg); }
+  @media (max-width: 480px) { .house { grid-template-columns: 1fr; } .house img { width: 100%; height: auto; aspect-ratio: 1; } }
+  .bar { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; margin-top: 8px; } .bar div { height: 100%; background: var(--accent); }
   details { padding: 6px 0; border-bottom: 1px solid var(--line); } summary { cursor: pointer; }
   main { padding: 16px; max-width: 1200px; margin: 0 auto; }
   button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
@@ -62,6 +66,7 @@
 <div id="toast"></div>
 <script>
 const AGENTS = {
+  atlas: ['Atlas', 'Scans a zip code from street photos and finds run-down or abandoned-looking houses'],
   acquisitions: ['Acquisition Manager', 'Answers calls & texts 24/7, answers seller questions, negotiates and gets the yes'],
   scout: ['Lead Scout', 'Ranks your lists by seller motivation and equity'],
   isa: ['ISA', 'First touch, then qualifies motivation, condition, timeline, price'],
@@ -91,7 +96,7 @@ function render() {
   const pending = S.drafts.filter((d) => d.status === 'pending').length;
   const openTasks = S.tasks.filter((t) => !t.done).length;
   const inboxCount = S.notifications.filter((n) => n.status === 'open').length;
-  const tabs = [['inbox', `Inbox (${inboxCount})`], ['pipeline', 'Pipeline'], ['approvals', `Approvals (${pending})`], ['tasks', `Tasks (${openTasks})`], ['buyers', 'Buyers'], ['import', 'Import'], ['settings', 'Settings']];
+  const tabs = [['inbox', `Inbox (${inboxCount})`], ['atlas', '🛰️ Atlas'], ['pipeline', 'Pipeline'], ['approvals', `Approvals (${pending})`], ['tasks', `Tasks (${openTasks})`], ['buyers', 'Buyers'], ['import', 'Import'], ['settings', 'Settings']];
   const nav = document.getElementById('tabs'); nav.innerHTML = '';
   for (const [k, label] of tabs) {
     const b = document.createElement('button'); b.textContent = label; b.className = k === tab ? 'on' : '';
@@ -100,7 +105,7 @@ function render() {
   const call = document.createElement('a'); call.href = '/call'; call.textContent = '📞 Test call'; call.className = 'navlink'; nav.append(call);
   document.getElementById('ai').textContent = `${S.ai.enabled ? `Claude on · ${S.ai.model}` : 'Claude off (no API key)'} · ${S.phone ? 'Phone line on' : 'Phone line off'}`;
   const v = document.getElementById('view'); v.innerHTML = '';
-  v.append(openLead ? leadView(S.leads.find((l) => l.id === openLead)) : ({ inbox, pipeline, approvals, tasks, buyers, import: importView, settings })[tab]());
+  v.append(openLead ? leadView(S.leads.find((l) => l.id === openLead)) : ({ inbox, atlas, pipeline, approvals, tasks, buyers, import: importView, settings })[tab]());
   v.querySelectorAll('[data-act]').forEach((el) => el.onclick = handlers[el.dataset.act].bind(null, el));
 }
 
@@ -124,6 +129,33 @@ function inbox() {
       <button class="primary" data-act="seed">Load sample data</button> <a href="/call">or test a call →</a></div>`}
     <div class="panel"><h2>Needs you (${open.length})</h2>${open.map(card).join('') || '<p class="muted">Nothing needs you right now. The team is working.</p>'}</div>
     <div class="panel"><h2>Recent conversations</h2>${convs || '<p class="muted">No calls or texts yet. Try one at <a href="/call">Test call</a>.</p>'}</div>`);
+}
+
+let atlasTimer = null;
+function atlas() {
+  const job = S.atlas.job;
+  clearTimeout(atlasTimer);
+  if (job?.status === 'running') atlasTimer = setTimeout(() => { if (tab === 'atlas' && !openLead) load(); }, 3000);
+  const found = S.leads.filter((l) => l.visual?.usable && l.visual.score >= 6).sort((a, b) => b.visual.score - a.visual.score);
+  const pct = job ? Math.round((job.scanned / Math.max(job.total, 1)) * 100) : 0;
+  const card = (l) => `<div class="house" data-act="open" data-id="${l.id}">
+      <img src="/atlas/photo/${l.id}" alt="Street photo of ${esc(l.address)}" loading="lazy">
+      <div><b>${esc(l.address)}</b><br><span class="muted">${esc(l.city)} ${esc(l.state)} ${esc(l.zip)}</span>
+      <div><span class="score pass">${l.visual.score}/10</span> ${esc(l.visual.summary)}</div>
+      <div>${l.visual.signs.map((s) => `<span class="pill">${esc(s)}</span>`).join('')}</div>
+      ${l.visual.imageDate ? `<div class="muted">Photo taken ${esc(l.visual.imageDate)}${Number(l.visual.imageDate.slice(0, 4)) < new Date().getFullYear() - 2 ? ': old, so check it is still like this' : ''}</div>` : ''}</div></div>`;
+  return $(`<div class="panel"><h2>🛰️ Atlas: virtual driving for dollars</h2>
+      <p class="muted">Atlas looks at the street photo of every house and flags the ones that look run down or abandoned. Distressed houses are added to your pipeline and ranked by the Lead Scout.</p>
+      ${S.atlas.ready ? '' : '<p class="pass">Not set up yet: start the app with <b>GOOGLE_MAPS_API_KEY</b> (Street View) and <b>ANTHROPIC_API_KEY</b>. See the README.</p>'}
+      <div class="row"><label>Zip code<input id="atlasZip" placeholder="e.g. 38109" inputmode="numeric" maxlength="5"></label><label>Houses to scan (max 1000)<input id="atlasLimit" type="number" value="100" min="1" max="1000"></label></div>
+      <div class="row"><button class="primary" data-act="atlasZip" ${job?.status === 'running' ? 'disabled' : ''}>Scan this zip</button>
+        <button data-act="atlasLeads" ${job?.status === 'running' ? 'disabled' : ''}>Scan my imported leads</button></div>
+      <p class="muted">Each house costs about 1 cent for the AI plus a Google Street View photo (Google gives a free monthly allowance). Start with 50–100 houses.
+      For a whole county, import a county list (e.g. from Propwire) and use "Scan my imported leads".</p>
+      ${job ? `<div class="panel"><b>${job.status === 'running' ? 'Scanning' : job.status === 'done' ? 'Finished' : 'Stopped'}: ${esc(job.label)}</b> · ${job.scanned}/${job.total} houses · <b>${job.flagged}</b> look distressed${job.noPhoto ? ` · ${job.noPhoto} no photo` : ''}
+        <div class="bar"><div style="width:${pct}%"></div></div>${job.error ? `<p class="pass">${esc(job.error)}</p>` : ''}</div>` : ''}
+    </div>
+    <div class="panel"><h2>Distressed houses found (${found.length})</h2>${found.map(card).join('') || '<p class="muted">None yet. Run a scan.</p>'}</div>`);
 }
 
 function pipeline() {
@@ -155,6 +187,7 @@ function leadView(l) {
     <div class="row"><span>Stage: <b>${esc(l.stage)}</b></span><span>Motivation: <b>${l.motivationScore ?? '–'}</b></span><span>Value: ${money(l.estimatedValue)} · Loan: ${money(l.mortgageBalance)}</span></div>
     ${(l.scoreReasons ?? []).map((r) => `<span class="pill">${esc(r)}</span>`).join('')}
     ${l.doNotContact ? '<p class="pass"><b>Do not contact:</b> the seller opted out.</p>' : ''}
+    ${l.visual?.hasImage ? `<div class="house" style="cursor:default"><img src="/atlas/photo/${l.id}" alt="Street photo"><div><b>Atlas: ${l.visual.score}/10</b> ${esc(l.visual.summary)}<div>${l.visual.signs.map((s) => `<span class="pill">${esc(s)}</span>`).join('')}</div>${l.visual.imageDate ? `<div class="muted">Photo taken ${esc(l.visual.imageDate)}</div>` : ''}</div></div>` : ''}
     ${l.agreedPrice ? `<p class="strong"><b>Seller agreed at ${money(l.agreedPrice)}</b> · <a href="/contracts/${l.id}" target="_blank">Open contract</a></p>` : ''}
     <div class="row">${l.consentToContact && !l.doNotContact ? `<button data-act="callback" data-id="${l.id}">📞 AI calls them back</button>` : '<span class="muted">The AI calls back only sellers who said it is OK.</span>'}</div>
   </div>
@@ -243,6 +276,12 @@ const handlers = {
   dealYes: async (el) => { const r = await api(`notifications/${el.dataset.id}/approve`, {}); toast(r.message); await load(); },
   dealNo: async (el) => { const r = await api(`notifications/${el.dataset.id}/decline`, {}); toast(r.message); await load(); },
   noteDone: (el) => act(`notifications/${el.dataset.id}/done`),
+  atlasZip: async () => {
+    const zip = val('atlasZip').trim();
+    if (!/^\d{5}$/.test(zip)) return toast('Enter a 5-digit zip code');
+    await act('atlas/scan', { zip, limit: Number(val('atlasLimit')), scope: 'zip' }); toast('Atlas is scanning');
+  },
+  atlasLeads: async () => { await act('atlas/scan', { zip: val('atlasZip').trim() || undefined, limit: Number(val('atlasLimit')), scope: 'leads' }); toast('Atlas is scanning your leads'); },
   callback: async (el) => { await act(`leads/${el.dataset.id}/call`); toast('Calling the seller now'); },
   open: (el) => { openLead = el.dataset.id; render(); },
   back: () => { openLead = null; render(); },

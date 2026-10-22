@@ -50,9 +50,24 @@ export interface Lead {
   consentToContact?: boolean;
   /** Seller asked not to be contacted again. Nothing is ever sent to this lead. */
   doNotContact?: boolean;
+  /** Atlas's read of the street photo of the house. */
+  visual?: VisualScan;
   notes: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface VisualScan {
+  /** 0 = well kept, 10 = clearly abandoned or badly run down. */
+  score: number;
+  signs: string[];
+  summary: string;
+  /** Whether the house was clearly visible in the photo. */
+  usable: boolean;
+  /** When the street photo was taken (YYYY-MM), from Google. Old photos may not show today's condition. */
+  imageDate?: string;
+  hasImage: boolean;
+  scannedAt: string;
 }
 
 export interface Qualification {
@@ -108,7 +123,7 @@ export interface Buyer {
   lastPurchase?: string;
 }
 
-export type AgentName = 'scout' | 'isa' | 'analyst' | 'negotiator' | 'dispositions' | 'coordinator' | 'acquisitions';
+export type AgentName = 'scout' | 'isa' | 'analyst' | 'negotiator' | 'dispositions' | 'coordinator' | 'acquisitions' | 'atlas';
 
 /** A live seller conversation run by the AI Acquisition Manager (phone call, SMS thread or browser test). */
 export interface Conversation {

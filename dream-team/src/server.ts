@@ -13,6 +13,8 @@ import { converse, findOrCreateLeadByPhone, greeting, startConversation } from '
 import { placeCallback, smsIn, validTwilioSignature, voiceStart, voiceTurn } from './phone.ts';
 import { purchaseAgreementHtml } from './contract.ts';
 import { startTelegramPolling } from './notify.ts';
+import { getClient } from './llm.ts';
+import { discoverAddresses, googleStreetView, scan, type ScanJob } from './agents/atlas.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const store = new Store(process.env.DREAM_DB || join(root, 'data', 'db.json'));
@@ -50,8 +52,43 @@ function authorized(req: IncomingMessage): boolean {
 type Handler = (p: string[], b: string, q: URLSearchParams) => unknown;
 const json = (b: string) => (b ? JSON.parse(b) : {});
 
+const atlasDir = join(dirname(store.path ?? join(root, 'data', 'db.json')), 'atlas');
+let atlasJob: ScanJob | null = null;
+
+/** Starts an Atlas scan in the background; the dashboard polls /api/state for progress. */
+async function startAtlas(opts: { zip?: string; limit?: number; scope?: 'zip' | 'leads' }): Promise<ScanJob> {
+  if (atlasJob?.status === 'running') throw new Error('Atlas is already scanning. Wait for it to finish.');
+  const key = process.env.GOOGLE_MAPS_API_KEY;
+  if (!key) throw new Error('Atlas needs a Google Maps API key with Street View enabled: start the app with GOOGLE_MAPS_API_KEY set.');
+  const client = getClient();
+  if (!client) throw new Error('Atlas needs Claude: start the app with ANTHROPIC_API_KEY set.');
+  const limit = Math.max(1, Math.min(Number(opts.limit) || 100, 1000));
+  const zip = (opts.zip ?? '').trim();
+  let targets;
+  if (opts.scope === 'leads') {
+    targets = store.db.leads.filter((l) => !l.visual && l.address && l.stage !== 'dead' && (!zip || l.zip === zip)).slice(0, limit);
+  } else {
+    const known = new Set(store.db.leads.map((l) => `${l.address.toLowerCase()}|${l.zip}`));
+    targets = (await discoverAddresses(zip, limit * 2)).filter((a) => !known.has(`${a.address.toLowerCase()}|${a.zip}`)).slice(0, limit);
+  }
+  if (targets.length === 0) throw new Error(opts.scope === 'leads' ? 'No unscanned leads to look at.' : `No new home addresses found for ${zip} on OpenStreetMap. Import a property list for this area and scan your leads instead.`);
+  const job: ScanJob = { id: `a_${Date.now()}`, label: zip || 'my leads', status: 'running', total: targets.length, scanned: 0, flagged: 0, noPhoto: 0, startedAt: new Date().toISOString() };
+  atlasJob = job;
+  store.log('atlas', `Started scanning ${targets.length} houses (${job.label}).`);
+  scan(store, job, targets, { photo: googleStreetView(key), client, imageDir: atlasDir })
+    .then(() => { job.status = 'done'; })
+    .catch((e) => { job.status = 'failed'; job.error = (e as Error).message; })
+    .finally(() => {
+      team.scoutAll(store);
+      store.log('atlas', `Scanned ${job.scanned} of ${job.total} houses in ${job.label}: ${job.flagged} look distressed${job.noPhoto ? `, ${job.noPhoto} had no street photo` : ''}.${job.error ? ` Stopped: ${job.error}` : ''}`);
+      store.save();
+    });
+  return job;
+}
+
 const routes: [string, RegExp, Handler][] = [
-  ['GET', /^\/api\/state$/, () => ({ ...store.db, ai: aiStatus(), phone: Boolean(process.env.TWILIO_AUTH_TOKEN && PUBLIC_URL) })],
+  ['GET', /^\/api\/state$/, () => ({ ...store.db, ai: aiStatus(), phone: Boolean(process.env.TWILIO_AUTH_TOKEN && PUBLIC_URL), atlas: { ready: Boolean(process.env.GOOGLE_MAPS_API_KEY), job: atlasJob } })],
+  ['POST', /^\/api\/atlas\/scan$/, (_p, b) => startAtlas(json(b))],
   ['POST', /^\/api\/seed$/, () => seed(store, root)],
   ['POST', /^\/api\/import\/leads$/, (_p, b, q) => {
     const leads = leadsFromCsv(b, q.get('source') || 'csv');
@@ -143,6 +180,15 @@ createServer(async (req, res) => {
     if (req.method === 'GET') {
       const page = { '/': 'index.html', '/index.html': 'index.html', '/call': 'call.html' }[url.pathname];
       if (page) return send(res, 200, readFileSync(join(root, 'public', page), 'utf8'), 'text/html; charset=utf-8');
+      const photo = url.pathname.match(/^\/atlas\/photo\/(\w+)$/);
+      if (photo) {
+        try {
+          res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=86400' });
+          return res.end(readFileSync(join(atlasDir, `${photo[1]}.jpg`)));
+        } catch {
+          return send(res, 404, { error: 'No photo' });
+        }
+      }
       const contract = url.pathname.match(/^\/contracts\/(\w+)$/);
       if (contract) {
         const lead = store.lead(contract[1]);
