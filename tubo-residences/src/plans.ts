@@ -1,7 +1,7 @@
 // Floor plans as SVG: the residence layouts, the key plan of the floor and
 // a downloadable sheet. Layouts are PLACEHOLDER drawings until the
 // architect's plans are supplied.
-import { brand, ellipseR, slabR, SLOT_SPAN, slots, type PlanId, type Unit } from './data'
+import { brand, slots, type PlanId, type Unit } from './data'
 
 type Room = { x: number; y: number; w: number; h: number; name: string; kind: 'living' | 'bed' | 'master' | 'bath' | 'kitchen' | 'entry' | 'balcony' }
 
@@ -117,32 +117,29 @@ export function planSvg(u: Unit, opts: { labels?: boolean } = {}): string {
   </svg>`
 }
 
-/** The whole floor of the tower, with this residence highlighted. Sea is up. */
+/** The whole floor, with this residence highlighted. The three homes face the sea; the core is behind. */
 export function keyPlanSvg(u: Unit): string {
-  const t = u.tower
-  const k = 6
-  const pt = (a: number, r: number) => `${(Math.cos(a) * r * k).toFixed(1)},${(-Math.sin(a) * r * k).toFixed(1)}`
-  const outline = 'M' + Array.from({ length: 121 }, (_, i) => pt((i / 120) * Math.PI * 2, slabR(t, u.floor, (i / 120) * Math.PI * 2))).join(' L') + 'Z'
+  const R = 100
+  // Each home takes a third of the front of an oval floor plate.
+  const span = Math.PI / 3
+  const pt = (a: number, r: number) => `${(Math.cos(a) * r * 1.25).toFixed(1)},${(-Math.sin(a) * r).toFixed(1)}`
   const sectors = slots
-    .map((s) => {
-      const a0 = s.centre - SLOT_SPAN / 2 + 0.03
-      const a1 = s.centre + SLOT_SPAN / 2 - 0.03
-      const pts = Array.from({ length: 31 }, (_, i) => {
-        const a = a0 + ((a1 - a0) * i) / 30
-        return pt(a, ellipseR(t, a))
-      })
+    .map((s, i) => {
+      const a1 = Math.PI - i * span - 0.03
+      const a0 = Math.PI - (i + 1) * span + 0.03
+      const arc = Array.from({ length: 21 }, (_, k) => pt(a1 - ((a1 - a0) * k) / 20, R)).join(' L')
       const on = s.slot === u.slot
-      const [mx, my] = pt(s.centre, ellipseR(t, s.centre) * 0.64).split(',')
-      return `<path d="M0,0 L${pts.join(' L')} Z" fill="${on ? '#e8467c' : '#e9ecef'}" stroke="#fff" stroke-width="2"/>
-        <text x="${mx}" y="${+my + 4}" text-anchor="middle" font-size="11" font-weight="600" fill="${on ? '#fff' : '#6b7480'}">0${s.slot}</text>`
+      const [mx, my] = pt((a0 + a1) / 2, R * 0.62).split(',')
+      return `<path d="M${pt(a1, R * 0.3)} L${arc} L${pt(a0, R * 0.3)} Z" fill="${on ? '#e8467c' : '#e9ecef'}" stroke="#fff" stroke-width="3"/>
+        <text x="${mx}" y="${+my + 5}" text-anchor="middle" font-size="15" font-weight="600" fill="${on ? '#fff' : '#6b7480'}">0${s.slot}</text>`
     })
     .join('')
-  const R = t.rx * 1.35 * k
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${(-R - 6).toFixed(0)} ${(-R - 30).toFixed(0)} ${(2 * R + 12).toFixed(0)} ${(2 * R + 40).toFixed(0)}" font-family="Inter, system-ui, sans-serif" role="img" aria-label="Key plan of floor ${u.floor}">
-    <text x="0" y="${(-R - 14).toFixed(0)}" text-anchor="middle" font-size="11" letter-spacing="3" fill="#2f8cff">▲ SEA</text>
-    <path d="${outline}" fill="#f6f4ef" stroke="#cfd5db" stroke-width="1.5"/>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-135 -135 270 200" font-family="Inter, system-ui, sans-serif" role="img" aria-label="Key plan of floor ${u.floor}">
+    <text x="0" y="-117" text-anchor="middle" font-size="13" letter-spacing="4" fill="#2f8cff">▲ SEA</text>
+    <path d="M${pt(Math.PI, R + 8)} A${(R + 8) * 1.25} ${R + 8} 0 0 1 ${pt(0, R + 8)} L${pt(0, R * 0.3)} L${pt(Math.PI, R * 0.3)} Z" fill="#f6f4ef" stroke="#cfd5db" stroke-width="2"/>
     ${sectors}
-    <ellipse rx="${t.rx * 0.28 * k}" ry="${t.rz * 0.28 * k}" fill="#cfd5db"/>
+    <rect x="-70" y="-${R * 0.3 - 2}" width="140" height="44" rx="6" fill="#dde2e7"/>
+    <text x="0" y="${-R * 0.3 + 28}" text-anchor="middle" font-size="12" fill="#6b7480">Core · lifts</text>
   </svg>`
 }
 
@@ -155,7 +152,7 @@ export function downloadPlan(u: Unit): void {
     <rect width="${W}" height="${H}" fill="#fff"/>
     <text x="60" y="80" font-size="16" letter-spacing="6" fill="#6b7480">${brand.name.toUpperCase()}</text>
     <text x="60" y="130" font-size="44" font-weight="700" fill="${INK}">Apartment ${u.code}</text>
-    <text x="60" y="170" font-size="18" fill="#6b7480">${u.tower.name} · Floor ${u.floor} · ${u.beds} bedroom${u.beds > 1 ? 's' : ''} · ${u.area.toFixed(2)} m² · ${u.facing} facing</text>
+    <text x="60" y="170" font-size="18" fill="#6b7480">Floor ${u.floor} · ${u.beds} bedroom${u.beds > 1 ? 's' : ''} · ${u.area.toFixed(2)} m² · ${u.facing} facing</text>
     ${place(planSvg(u), 60, 210, 960, 720)}
     ${place(keyPlanSvg(u), 1080, 230, 260, 260)}
     <text x="1080" y="540" font-size="13" fill="#6b7480">Key plan — floor ${u.floor}</text>

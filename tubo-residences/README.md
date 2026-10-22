@@ -1,11 +1,15 @@
-# Tubo Residences — 3D residence explorer
+# Tubo Residences — residence explorer (concept)
 
-An interactive sales website for Tubo Residences. Visitors explore the
-development in real-time 3D. They can:
+A concept sales website for Tubo Residences. It is built on photo-realistic
+renders, so visitors can:
 
-- see every apartment's availability on the tower itself
+- see each apartment's availability drawn on the tower
 - open its floor plan
-- stand on its balcony to see the view, at sunrise, by day, under cloud or at night
+- look at the view
+- switch between day, overcast and night
+
+The renders in `public/renders/` are AI-generated concept images, not
+pictures of a real building.
 
 ## Run it
 
@@ -24,41 +28,51 @@ S3, GitHub Pages…).
 
 | Part | What it does |
 |---|---|
-| Time-of-day slider (top) | Sunrise → day → overcast → night: sun, sky, clouds, fog, sea and lit windows all follow it |
-| **Location** | Aerial view of the site, the city and the bay, with the two towers and nearby places pinned |
-| **Apartments** | Every residence drawn on the tower in its status colour: blue available, yellow reserved, red sold. Hover for details, tap to select |
-| Filters (› on the right) | Status, bedrooms, tower and floor range; the list and the 3D view update together |
-| Residence card | Mini plan, bedrooms, floor, area and a **Floor plan** button, tied to the apartment by a leader line |
-| Floor plan | Key plan of the floor, the full layout, area, price, **Window view**, **Add to compare**, **Download floor plan** (SVG sheet) and **Enquire** (email) |
-| Window view | The camera stands on that apartment's balcony at its real height. **View 1** looks straight out, **View 2** turns along the coast, and you can drag to look around |
+| Time-of-day slider (top) | Crossfades the tower between its real day, overcast and night renders. The other photos are colour-graded to follow it |
+| **Location** | Aerial render of the seafront with the tower and nearby places pinned. Tap the tower to dive in |
+| **Apartments** | Every residence traced on the tower photo in its status colour: blue available, yellow reserved, red sold. Hover for details; tap to zoom in and select |
+| Filters (› on the right) | Status, bedrooms and floor range; the list and the tower update together |
+| Residence card | Mini plan, bedrooms, floor, area and **Floor plan**, tied to the apartment by a leader line |
+| Floor plan | Key plan, full layout, area, price, **Window view**, **Add to compare**, **Download floor plan** (SVG sheet) and **Enquire** (email) |
+| Window view | **View 1**: the living room and its sea view. **View 2**: out over the bay |
 | **Compare** | Up to four residences side by side |
-| **Gallery** | Five cinematic camera shots, each at its own time of day |
+| **Gallery** | All the renders |
 | **Highlights** | Project facts and selling points |
 
-`?apartment=A1804` in the URL opens straight onto a residence, which is
-handy for links in emails and ads.
+`?apartment=1804` in the URL opens straight onto a residence.
 
-## Before launch: replace the placeholders
+## The renders
 
-Everything marked `PLACEHOLDER` in the source is illustrative:
+| File | Used for |
+|---|---|
+| `tower-day.jpg` | The main tower view; the apartments were traced on it |
+| `tower-overcast.jpg`, `tower-night.jpg` | Edits of the day render with the same framing, so the traced apartments still line up |
+| `aerial.jpg` | Location view |
+| `interior.jpg` | Window view 1 and the gallery |
 
-- `src/data.ts`
-  - `brand.salesEmail`: the address the Enquire button writes to
-  - `towers`: number of floors and footprint
-  - `slots`: the unit mix and areas per floor
-  - `statusFor()`: availability is generated. Replace it with the live sales schedule (a JSON file or an API)
-  - `places`: nearby points of interest and their walking or driving times
-  - `highlights`: the selling points
-- `src/plans.ts`: the three apartment layouts are indicative drawings. Swap them for the architect's plans (SVG or images)
+To replace the tower render, also re-measure the balcony slabs in
+`src/facade.ts`. The apartment outlines are drawn from those numbers.
+
+Worth adding later: a sunrise render (an edit of `tower-day.jpg` in the
+same framing), a dedicated balcony view, more interiors, and higher-resolution
+versions. The current images are 1344 × 752.
+
+## Placeholders
+
+Everything marked `PLACEHOLDER` in `src/data.ts` is made up:
+
+- the sales email
+- the unit mix and areas
+- availability (generated)
+- nearby places
+- the highlights copy
+
+The floor plans in `src/plans.ts` are indicative drawings.
 
 ## How it's built
 
-- `src/scene.ts`: the Three.js world. The towers are generated from a
-  floor-shape function, so the balconies ripple floor by floor. It also
-  builds one selectable volume per residence, the city, the coast, the
-  physical sky (`Sky` with clouds) and the time-of-day keyframes, and
-  handles the camera flights.
-- `src/data.ts`: the towers, the floor geometry and the residence schedule.
+- `src/main.ts`: the interface, the photo stage and the flow between views.
+- `src/facade.ts`: where each apartment sits on the tower render.
+- `src/data.ts`: the residence schedule and copy.
 - `src/plans.ts`: the SVG floor plans, key plans and the download sheet.
-- `src/main.ts`: the interface and the flow between views.
 - `src/styles.css`: all styling, including the phone layout.
