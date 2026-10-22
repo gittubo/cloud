@@ -11,6 +11,7 @@ The other agents' messages wait in an **approval queue** until you approve them.
 
 | Agent | Replaces | What it does |
 |---|---|---|
+| **Atlas** (Claude vision) | driving for dollars | Give it a zip code and it finds the home addresses there, looks at each house's Google Street View photo, and flags the ones that look run down or abandoned: boarded windows, overgrown yard, roof tarp, peeling paint, junk. Flagged houses go into your pipeline with the photo and reasons, and the Lead Scout ranks them higher. It can also scan a county list you import. |
 | **Acquisition Manager** (Claude) | ISA + acquisitions manager | Talks to sellers by phone or text, day and night. It builds rapport, answers questions ("how does this work?", "why less than Zillow?", "is this a scam?", "what's an assignment?"), qualifies the seller, makes the offer and handles counters. Price rules are enforced in code: it can only say numbers the Deal Analyst gives it, it never learns your MAO, and any agreement above MAO is refused. It says it's a virtual assistant, honours "stop" instantly and hands you anything it shouldn't handle (legal questions, upset sellers, missing comps). |
 | **Lead Scout** | list-stacking VA | Scores each property 0–100 for seller motivation: pre-foreclosure, tax-delinquent, probate, vacant, absentee, code violations, equity, years owned. Drops leads with too little equity to wholesale. |
 | **ISA** | inside sales / cold caller | Writes the first-touch text and a call script, then reads each seller reply and pulls out the five things you need before an offer: motivation, condition, timeline, asking price, occupancy. Keeps asking until it has them. |
@@ -46,6 +47,37 @@ Your data is saved to `dream-team/data/db.json`. Back that file up; it's git-ign
 | Telegram alerts | Free. |
 
 With an API key set, Claude also polishes the other agents' template drafts.
+
+## Atlas: find run-down houses from street photos
+
+1. **Get a Google Maps API key.** Create a Google Cloud project, turn on the **Street View
+   Static API**, and create an API key. Google asks for a payment card but gives a free
+   monthly allowance of Street View requests, so check Google's current Maps pricing. The
+   "is there a photo here?" check Atlas runs first is free.
+2. **Start the app with both keys:**
+   ```bash
+   GOOGLE_MAPS_API_KEY=... ANTHROPIC_API_KEY=... npm start
+   ```
+3. **Open the 🛰️ Atlas tab** and use either button:
+   - **Scan this zip:** Atlas finds the home addresses in that zip from OpenStreetMap (free)
+     and looks at each one.
+   - **Scan my imported leads:** looks at the houses on a list you imported. Use this for a
+     whole county: export the county from Propwire, import it, then scan.
+4. **Read the results.** Houses rated **6/10 or worse** appear with their photo and the
+   reasons. New addresses that look fine are *not* added, so your pipeline only holds
+   real prospects.
+
+**Cost:** roughly 1 cent of Claude per house, plus Google's per-photo price once you're past
+the free allowance. Start with 50–100 houses. To make large scans cheaper, set
+`ATLAS_MODEL=claude-haiku-5-5`; it's fine at spotting boarded windows.
+
+**Limits to know:**
+- Street View photos can be **a few years old**, and each result shows the photo date.
+  Some streets have no photo at all.
+- OpenStreetMap's address coverage varies by county. If a zip returns few addresses, import
+  a property list and use "Scan my imported leads".
+- A rough-looking house still needs the usual checks: owner, equity and the Deal Analyst's
+  numbers.
 
 ## Try the Acquisition Manager now (no phone line needed)
 
