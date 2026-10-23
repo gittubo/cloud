@@ -6,7 +6,7 @@ renders, so visitors can:
 - see each apartment's availability drawn on the tower
 - open its floor plan
 - look at the view
-- switch between day, overcast and night
+- switch between sunrise, day, overcast and night
 
 The renders in `public/renders/` are AI-generated concept images, not
 pictures of a real building.
@@ -28,13 +28,13 @@ S3, GitHub Pages…).
 
 | Part | What it does |
 |---|---|
-| Time-of-day slider (top) | Crossfades the tower between its real day, overcast and night renders. The other photos are colour-graded to follow it |
+| Time-of-day slider (top) | Crossfades the tower between its real sunrise, day, overcast and night renders. The other photos are colour-graded to follow it |
 | **Location** | Aerial render of the seafront with the tower and nearby places pinned. Tap the tower to dive in |
 | **Apartments** | Every residence traced on the tower photo in its status colour: blue available, yellow reserved, red sold. Hover for details; tap to zoom in and select |
 | Filters (› on the right) | Status, bedrooms and floor range; the list and the tower update together |
 | Residence card | Mini plan, bedrooms, floor, area and **Floor plan**, tied to the apartment by a leader line |
 | Floor plan | Key plan, full layout, area, price, **Window view**, **Add to compare**, **Download floor plan** (SVG sheet) and **Enquire** (email) |
-| Window view | **View 1**: the living room and its sea view. **View 2**: out over the bay |
+| Window view | **View 1**: the living room and its sea view. **View 2**: from a high balcony over the beach and the bay |
 | **Compare** | Up to four residences side by side |
 | **Gallery** | All the renders |
 | **Highlights** | Project facts and selling points |
@@ -46,16 +46,16 @@ S3, GitHub Pages…).
 | File | Used for |
 |---|---|
 | `tower-day.jpg` | The main tower view; the apartments were traced on it |
-| `tower-overcast.jpg`, `tower-night.jpg` | Edits of the day render with the same framing, so the traced apartments still line up |
+| `tower-sunrise.jpg`, `tower-overcast.jpg`, `tower-night.jpg` | Edits of the day render with the same framing, so the traced apartments still line up |
 | `aerial.jpg` | Location view |
 | `interior.jpg` | Window view 1 and the gallery |
+| `balcony.jpg` | Window view 2 and the gallery |
 
 To replace the tower render, also re-measure the balcony slabs in
 `src/facade.ts`. The apartment outlines are drawn from those numbers.
 
-Worth adding later: a sunrise render (an edit of `tower-day.jpg` in the
-same framing), a dedicated balcony view, more interiors, and higher-resolution
-versions. The current images are 1344 × 752.
+Worth adding later: more interiors and higher-resolution versions. The
+current images are 1344 × 752.
 
 ## Placeholders
 

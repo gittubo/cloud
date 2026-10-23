@@ -17,6 +17,7 @@ const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const R = (name: string) => `${import.meta.env.BASE_URL}renders/${name}.jpg`
 
 const icon = {
+  sunrise: '<path d="M3 18h18M6 14a6 6 0 0 1 12 0M12 4v4M4.9 8.9l1.6 1.6M19.1 8.9l-1.6 1.6"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   cloud: '<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.3 1.5A3.3 3.3 0 0 0 7 18z"/>',
   moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
@@ -46,7 +47,7 @@ const state = {
   beds: new Set<number>(),
   floorMin: 1,
   floorMax: FLOORS,
-  time: 0,
+  time: 1,
 }
 
 const matches = (u: Unit) =>
@@ -65,6 +66,7 @@ stage.innerHTML = `
   <section class="scene" data-scene="tower">
     <div class="frame">
       <img class="tod tod--day" src="${R('tower-day')}" alt="The Tubo Residences tower above the sea" />
+      <img class="tod tod--sunrise" src="${R('tower-sunrise')}" alt="" />
       <img class="tod tod--overcast" src="${R('tower-overcast')}" alt="" />
       <img class="tod tod--night" src="${R('tower-night')}" alt="" />
       <svg class="units" viewBox="0 0 ${RENDER_W} ${RENDER_H}" preserveAspectRatio="xMidYMid slice" role="group" aria-label="Residences on the tower"></svg>
@@ -72,7 +74,7 @@ stage.innerHTML = `
   </section>
   <section class="scene" data-scene="window">
     <div class="frame view view--1"><img class="graded" src="${R('interior')}" alt="Living room of a sea-view residence" /><div class="tint"></div></div>
-    <div class="frame view view--2"><img class="graded" src="${R('tower-day')}" alt="Looking out over the bay" /><div class="tint"></div></div>
+    <div class="frame view view--2"><img class="graded" src="${R('balcony')}" alt="The view from a high-floor balcony over the beach and the bay" /><div class="tint"></div></div>
   </section>
   <section class="scene" data-scene="gallery">
     <div class="frame"><img class="gallery__img" alt="" /></div>
@@ -83,11 +85,12 @@ ui.innerHTML = `
   <header class="top">
     <a class="brand" href="./" aria-label="${brand.name} — start again"><b>TUBO</b><span>RESIDENCES</span></a>
     <div class="tod-bar" role="group" aria-label="Time of day">
-      <input class="tod-bar__range" type="range" min="0" max="2" step="0.01" value="0" aria-label="Time of day" />
+      <input class="tod-bar__range" type="range" min="0" max="3" step="0.01" value="1" aria-label="Time of day" />
       <div class="tod-bar__icons">
-        <button type="button" data-t="0" aria-label="Day">${svg('sun')}</button>
-        <button type="button" data-t="1" aria-label="Overcast">${svg('cloud')}</button>
-        <button type="button" data-t="2" aria-label="Night">${svg('moon')}</button>
+        <button type="button" data-t="0" aria-label="Sunrise">${svg('sunrise')}</button>
+        <button type="button" data-t="1" aria-label="Day">${svg('sun')}</button>
+        <button type="button" data-t="2" aria-label="Overcast">${svg('cloud')}</button>
+        <button type="button" data-t="3" aria-label="Night">${svg('moon')}</button>
       </div>
     </div>
     <div class="top__actions">
@@ -164,10 +167,11 @@ function hint(text: string): void {
 }
 
 // ---------- Time of day ----------
-// 0 day, 1 overcast, 2 night. The tower has a real render for each; the other
-// photos are graded to follow the slider.
+// 0 sunrise, 1 day, 2 overcast, 3 night. The tower has a real render for
+// each; the other photos are graded to follow the slider.
 
 const GRADE = [
+  { sepia: 0.25, sat: 1.15, bright: 0.97, hue: -6, tint: 0 },
   { sepia: 0, sat: 1, bright: 1, hue: 0, tint: 0 },
   { sepia: 0, sat: 0.55, bright: 0.9, hue: 0, tint: 0 },
   { sepia: 0, sat: 0.75, bright: 0.42, hue: 12, tint: 0.55 },
@@ -177,15 +181,16 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
 
 function applyTime(t: number): void {
   state.time = t
-  const i = Math.min(1, Math.floor(t))
+  const i = Math.min(2, Math.floor(t))
   const f = t - i
   const g = {} as Grade
   for (const k of Object.keys(GRADE[0]) as (keyof Grade)[]) g[k] = GRADE[i][k] + (GRADE[i + 1][k] - GRADE[i][k]) * f
   const s = stage.style
   s.setProperty('--grade', `sepia(${g.sepia}) saturate(${g.sat}) brightness(${g.bright}) hue-rotate(${g.hue}deg)`)
   s.setProperty('--tint', String(g.tint))
-  s.setProperty('--overcast', String(clamp01(t)))
-  s.setProperty('--night', String(clamp01(t - 1)))
+  s.setProperty('--sunrise', String(clamp01(1 - t)))
+  s.setProperty('--overcast', String(clamp01(t - 1)))
+  s.setProperty('--night', String(clamp01(t - 2)))
 }
 
 const range = $<HTMLInputElement>('.tod-bar__range')
@@ -497,10 +502,12 @@ function openHighlights(): void {
 
 const shots = [
   { name: 'The seafront', img: 'aerial' },
+  { name: 'Sunrise', img: 'tower-sunrise' },
   { name: 'By day', img: 'tower-day' },
   { name: 'Overcast', img: 'tower-overcast' },
   { name: 'By night', img: 'tower-night' },
   { name: 'Living room', img: 'interior' },
+  { name: 'Balcony view', img: 'balcony' },
 ]
 function openGallery(): void {
   closePanels()
@@ -643,7 +650,7 @@ function enter(): void {
 }
 
 applyFilters()
-applyTime(0)
+applyTime(1)
 layoutPins()
 showScene('location')
 // Deep link: ?apartment=1804 opens straight onto a residence.

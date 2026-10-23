@@ -40,7 +40,8 @@ svg { display: block; }
 .graded { filter: var(--grade); }
 .tint { position: absolute; inset: 0; background: #0a1a4a; mix-blend-mode: multiply; opacity: var(--tint, 0); pointer-events: none; }
 
-/* Tower: the real day, overcast and night renders crossfade. */
+/* Tower: the real sunrise, day, overcast and night renders crossfade. */
+.tod--sunrise { opacity: var(--sunrise, 0); }
 .tod--overcast { opacity: var(--overcast, 0); }
 .tod--night { opacity: var(--night, 0); }
 [data-scene='tower'] { transform: scale(1.08); }
@@ -56,7 +57,6 @@ svg { display: block; }
 
 .view { opacity: 0; transition: opacity 0.8s ease; }
 [data-scene='window'][data-view='1'] .view--1, [data-scene='window'][data-view='2'] .view--2 { opacity: 1; }
-.view--2 img { transform: scale(2.8); transform-origin: 100% 64%; }
 
 .gallery__img { opacity: 0; transition: opacity 0.6s ease; }
 .gallery__img.is-in { opacity: 1; }
