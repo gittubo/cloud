@@ -407,6 +407,17 @@ textarea {
   --name-size: min(30vw, 50vh);
 }
 
+.hero__still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .hero__veil {
   position: absolute;
   inset: 0;
@@ -461,6 +472,7 @@ textarea {
 
 .pull__shadow {
   color: rgba(28, 12, 4, 0.6);
+  filter: blur(0.05em);
 }
 
 .pull__move {
@@ -478,7 +490,9 @@ textarea {
   position: absolute;
   inset: 0;
   display: block;
-  color: color-mix(in srgb, var(--side, #1b1108), #000 calc(var(--k) * 55%));
+  /* One fixed side colour (dark plum-brown, right for both the wall sign and
+     the lacquer) so the slices are painted once and then only moved. */
+  color: color-mix(in srgb, #2b0f17, #000 calc(var(--k) * 55%));
   backface-visibility: hidden;
 }
 
@@ -653,7 +667,7 @@ textarea {
     0 40px 70px -24px rgba(70, 18, 38, 0.55),
     0 12px 24px -12px rgba(70, 18, 38, 0.4);
   opacity: 0;
-  will-change: transform, opacity, filter;
+  will-change: transform, opacity;
 }
 
 .plates img:nth-child(1) {
@@ -885,7 +899,7 @@ textarea {
   box-shadow:
     0 50px 80px -30px rgba(70, 18, 38, 0.55),
     0 14px 28px -14px rgba(70, 18, 38, 0.35);
-  will-change: transform, filter, opacity;
+  will-change: transform, opacity;
   cursor: pointer;
 }
 
@@ -1446,6 +1460,31 @@ textarea {
   .visit__list > div {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+}
+
+/* ---------- Touch devices: no live frosted glass ---------- */
+
+/* A backdrop blur is redone on every scroll frame; on phones and tablets a
+   near-solid fill looks the same and costs nothing. */
+@media (hover: none) {
+  .nav.is-solid,
+  .intro__card,
+  .pill--glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .nav.is-solid {
+    background: rgba(251, 244, 242, 0.97);
+  }
+
+  .intro__card {
+    background: rgba(255, 255, 255, 0.94);
+  }
+
+  .pill--glass {
+    background: rgba(20, 8, 12, 0.38);
   }
 }
 

@@ -29,12 +29,23 @@ npm run shots      # after build: desktop + mobile screenshots into .shots/
 
 ## Media
 
-Originals live in `media/source/` (`entrance.mp4`, `photos/`). `npm run media` (needs ffmpeg) regenerates
-everything in `public/`: hero frames in `public/frames/{hd,sd}/` plus `src/frames.generated.json`, the
-painted-out wall (`wall.webp`), the lobby loop and nail reel in `public/media/`, and WebP photos in `public/photos/`.
+Originals live in `media/source/`: `entrance.mp4` (landscape walk-in, used on desktops and landscape
+tablets), `entrance-portrait.mp4` (vertical walk-in, used on phones and portrait tablets) and `photos/`.
+`npm run media` (needs ffmpeg) regenerates everything in `public/`: hero frames in
+`public/frames/{land,port}/{hd,sd}/` plus `src/frames.generated.json`, the painted-out wall (`wall.webp`)
+and its soft-focus copy (`wall-blur.webp`), the lobby loops and nail reel in `public/media/`, and WebP
+photos in `public/photos/`.
 
-If the entrance film changes, re-measure the wall sign in its last frame and update both `SIGN` in
-`src/main.ts` and `SIGN_*` in `scripts/build-media.sh` — the pulled-out name is matched to it.
+If either entrance film changes, re-measure the wall sign in its last frame and update both `FILMS` in
+`src/main.ts` and the sign boxes in `scripts/build-media.sh` — the pulled-out name is matched to it.
+
+## Speed
+
+Each screen downloads only its own film and only what it needs to open: the page is ready to scroll once
+the first frame is in (about 0.3 MB), and the rest of the film streams in nearest-first while the visitor
+looks at the storefront. Photos and clips below the hero load as you approach them. `public/_headers`
+sets long-lived caching on Netlify. Measured with throttled Chrome: ready to scroll in about 0.5 s on fast
+connections, 0.8 s on 4G and 1.7 s on slow 4G, on desktop, tablet and phone alike.
 
 ## Before launch — placeholders to replace
 
@@ -46,4 +57,4 @@ If the entrance film changes, re-measure the wall sign in its last frame and upd
   `public/favicon.svg`); swap in the salon's real logo file when available.
 
 Visitors who prefer reduced motion get a static page with the name already off the wall; slow or
-data-saver connections and phones get the lighter `sd` hero frames (force with `?tier=hd` / `?tier=sd`).
+data-saver connections get the lighter `sd` hero frames (force with `?tier=hd` / `?tier=sd`).

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Turns media/source/ into the web-ready files under public/.
-#   entrance.mp4  -> public/frames/{hd,sd}/f00000.webp ... (scroll-scrubbed hero)
-#                 -> public/frames/{hd,sd}/wall.webp  (last frame with the wall sign removed)
+#   entrance.mp4 / entrance-portrait.mp4
+#                 -> public/frames/{land,port}/{hd,sd}/f00000.webp ... (scroll-scrubbed hero)
+#                 -> public/frames/{land,port}/{hd,sd}/wall.webp, wall-blur.webp
+#                    (last frame with the wall sign removed, and a soft-focus copy of it)
 #                 -> public/media/lobby.mp4 + .webp    (lobby loop for the reveal)
 #                 -> public/photos/station.webp, lounge.webp (stills for the menu)
 #   photos/*.jpeg -> public/photos/*.webp
@@ -11,37 +13,59 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SRC=media/source
-FPS=15 # hero frames per second of footage; the player crossfades between them
-# The "Tubo" lettering on the reception wall in the film's last frame, in
-# source pixels (1280x720), with a margin. Keep in step with SIGN in main.ts.
-SIGN_X=548 SIGN_Y=297 SIGN_W=120 SIGN_H=45
+FPS=12 # hero frames per second of footage; the player crossfades between them
 
 rm -rf public/frames public/media public/photos
-mkdir -p public/frames/hd public/frames/sd public/media public/photos
+mkdir -p public/media public/photos
 
-ffmpeg -v error -i "$SRC/entrance.mp4" -vf "fps=$FPS,scale=1280:-2:flags=lanczos" \
-  -c:v libwebp -quality 76 -start_number 0 public/frames/hd/f%05d.webp
-ffmpeg -v error -i "$SRC/entrance.mp4" -vf "fps=$FPS,scale=720:-2:flags=lanczos" \
-  -c:v libwebp -quality 66 -start_number 0 public/frames/sd/f%05d.webp
-count=$(ls public/frames/hd | wc -l | tr -d ' ')
-printf '{ "count": %s, "fps": %s }\n' "$count" "$FPS" > src/frames.generated.json
+# film <name> <source> <hd width> <hd quality> <sd width> <sd quality> <sign box x:y:w:h in source pixels>
+# The sign box is the "Tubo" lettering on the reception wall in the source's
+# last frame, with a margin; keep it in step with FILMS in src/main.ts.
+film() {
+  local name=$1 src=$2 hdw=$3 hdq=$4 sdw=$5 sdq=$6 box=$7
+  local srcw count last
+  srcw=$(ffprobe -v error -select_streams v -show_entries stream=width -of csv=p=0 "$src")
+  IFS=: read -r bx by bw bh <<<"$box"
+  for tier in hd sd; do
+    local w=$hdw q=$hdq
+    [ "$tier" = sd ] && w=$sdw q=$sdq
+    mkdir -p "public/frames/$name/$tier"
+    ffmpeg -v error -i "$src" -vf "fps=$FPS,scale=$w:-2:flags=lanczos" \
+      -c:v libwebp -quality "$q" -compression_level 6 -start_number 0 "public/frames/$name/$tier/f%05d.webp"
+    count=$(ls "public/frames/$name/$tier" | wc -l | tr -d ' ')
+    last=$(printf 'f%05d.webp' $((count - 1)))
+    # The wall without its sign: the same frame the film ends on, with the
+    # lettering painted out, so the name can be pulled off the wall; and a
+    # soft-focus copy for when focus racks to the name (cheaper than a live blur).
+    local k
+    k=$(awk "BEGIN{print $w/$srcw}")
+    ffmpeg -v error -i "public/frames/$name/$tier/$last" -vf \
+      "delogo=x=$(awk "BEGIN{print int($bx*$k)}"):y=$(awk "BEGIN{print int($by*$k)}"):w=$(awk "BEGIN{print int($bw*$k)+1}"):h=$(awk "BEGIN{print int($bh*$k)+1}")" \
+      -c:v libwebp -quality "$q" "public/frames/$name/$tier/wall.webp"
+    ffmpeg -v error -i "public/frames/$name/$tier/wall.webp" -vf "scale=iw/4:-2,gblur=sigma=$(awk "BEGIN{print $w/400}"),scale=$w:-2" \
+      -c:v libwebp -quality 60 "public/frames/$name/$tier/wall-blur.webp"
+  done
+  echo "\"$name\": { \"count\": $count }"
+}
 
-# The wall without its sign: the same frame the film ends on, with the
-# lettering painted out, so the name can be pulled off the wall.
-last=$(printf 'f%05d.webp' $((count - 1)))
-ffmpeg -v error -i "public/frames/hd/$last" \
-  -vf "delogo=x=$SIGN_X:y=$SIGN_Y:w=$SIGN_W:h=$SIGN_H" -c:v libwebp -quality 80 public/frames/hd/wall.webp
-ffmpeg -v error -i public/frames/hd/wall.webp -vf "scale=720:-2:flags=lanczos" -c:v libwebp -quality 70 public/frames/sd/wall.webp
+land=$(film land "$SRC/entrance.mp4" 1280 70 854 58 548:297:120:45)
+port=$(film port "$SRC/entrance-portrait.mp4" 720 66 540 56 200:532:202:72)
+printf '{ "fps": %s, %s, %s }\n' "$FPS" "$land" "$port" > src/frames.generated.json
+last=$(printf 'f%05d.webp' $(($(ls public/frames/land/hd | grep -c '^f') - 1)))
 
 # Lobby loop: the last stretch of the walk, played forward then back.
 ffmpeg -v error -ss 4.2 -t 3.8 -i "$SRC/entrance.mp4" -an \
   -filter_complex "[0:v]scale=960:-2,split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1[v]" -map "[v]" \
   -c:v libx264 -preset slow -crf 26 -pix_fmt yuv420p -movflags +faststart public/media/lobby.mp4
-ffmpeg -v error -i public/frames/hd/wall.webp -vf "scale=960:-2" -c:v libwebp -quality 75 public/media/lobby.webp
+ffmpeg -v error -i public/frames/land/hd/wall.webp -vf "scale=960:-2" -c:v libwebp -quality 72 public/media/lobby.webp
+ffmpeg -v error -ss 4.2 -t 3.8 -i "$SRC/entrance-portrait.mp4" -an \
+  -filter_complex "[0:v]scale=540:-2,split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1[v]" -map "[v]" \
+  -c:v libx264 -preset slow -crf 26 -pix_fmt yuv420p -movflags +faststart public/media/lobby-portrait.mp4
+ffmpeg -v error -i public/frames/port/hd/wall.webp -vf "scale=540:-2" -c:v libwebp -quality 72 public/media/lobby-portrait.webp
 
 # Stills from the lobby for the treatment menu.
-ffmpeg -v error -i "public/frames/hd/$last" -vf "crop=600:400:0:170" -c:v libwebp -quality 80 public/photos/station.webp
-ffmpeg -v error -i "public/frames/hd/$last" -vf "crop=560:380:720:150" -c:v libwebp -quality 80 public/photos/lounge.webp
+ffmpeg -v error -i "public/frames/land/hd/$last" -vf "crop=600:400:0:170" -c:v libwebp -quality 80 public/photos/station.webp
+ffmpeg -v error -i "public/frames/land/hd/$last" -vf "crop=560:380:720:150" -c:v libwebp -quality 80 public/photos/lounge.webp
 
 for photo in "$SRC"/photos/*.jpeg; do
   name=$(basename "$photo" .jpeg)
@@ -69,5 +93,5 @@ ffmpeg -v error "${inputs[@]}" -filter_complex "${chain%;}" -map "[$prev]" -r $R
 ffmpeg -v error -i "$SRC/photos/${REEL[0]}.jpeg" -vf "scale=544:680:force_original_aspect_ratio=increase,crop=544:680" \
   -c:v libwebp -quality 75 public/media/reel.webp
 
-echo "hero frames: $count"
-du -sh public/frames/hd public/frames/sd public/media public/photos
+cat src/frames.generated.json
+du -sh public/frames/*/* public/media public/photos

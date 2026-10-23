@@ -14,6 +14,8 @@ const stops = process.env.STOPS?.split(',').map(Number) ?? [0, 1.5, 2.4, 2.9, 3.
 const viewports = Object.fromEntries(
   Object.entries({
     desktop: { width: 1440, height: 900 },
+    tablet: { width: 820, height: 1180 },
+    'tablet-land': { width: 1180, height: 820 },
     mobile: { width: 390, height: 844 },
   }).filter(([name]) => !process.env.ONLY || process.env.ONLY === name),
 )

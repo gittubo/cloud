@@ -3,7 +3,6 @@
 // the closest loaded neighbour stands in. Fractional positions crossfade the
 // two neighbouring frames, which keeps the 12 fps footage smooth.
 
-export type Tier = 'hd' | 'sd'
 
 const CONCURRENCY = 6
 
@@ -16,7 +15,8 @@ export class FrameSequence {
   private readonly priority: number[]
   onLoad: (() => void) | null = null
 
-  constructor(readonly count: number, private readonly tier: Tier, sparseStep = 10, densePrefix = 16) {
+  /** dir is the frames folder under frames/, e.g. 'port/hd'. */
+  constructor(readonly count: number, private readonly dir: string, sparseStep = 8, densePrefix = 6) {
     this.images = new Array(count).fill(null)
     this.requested = new Array(count).fill(false)
     // First the opening frames densely, then a coarse pass over the whole film,
@@ -35,7 +35,7 @@ export class FrameSequence {
   }
 
   url(i: number): string {
-    return `${import.meta.env.BASE_URL}frames/${this.tier}/f${String(i).padStart(5, '0')}.webp`
+    return `${import.meta.env.BASE_URL}frames/${this.dir}/f${String(i).padStart(5, '0')}.webp`
   }
 
   start(): void {

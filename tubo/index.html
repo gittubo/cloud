@@ -9,8 +9,11 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta property="og:title" content="Tubo — Nails &amp; Beauty Salon" />
     <meta property="og:description" content="Relax. Refresh. Rejuvenate. Step inside Tubo in Lagos." />
-    <meta property="og:image" content="./frames/hd/f00119.webp" />
-    <link rel="preload" as="image" href="./frames/hd/f00000.webp" />
+    <meta property="og:image" content="./frames/land/hd/wall.webp" />
+    <!-- The first frame of whichever film this screen gets (see pickFilm in main.ts). -->
+    <link rel="preload" as="image" href="./frames/land/hd/f00000.webp" media="(min-aspect-ratio: 1/1) and (min-width: 1001px)" fetchpriority="high" />
+    <link rel="preload" as="image" href="./frames/land/sd/f00000.webp" media="(min-aspect-ratio: 1/1) and (max-width: 1000px)" fetchpriority="high" />
+    <link rel="preload" as="image" href="./frames/port/hd/f00000.webp" media="(max-aspect-ratio: 1/1)" fetchpriority="high" />
   </head>
   <body>
     <div class="preloader" aria-hidden="true">
@@ -83,22 +86,22 @@
           <p class="eyebrow">Fresh from the nail bar</p>
           <div class="plates" aria-hidden="true">
             <div class="plates__set">
-              <img src="./photos/pink-blossom-square.webp" alt="" />
-              <img src="./photos/burgundy-set.webp" alt="" />
-              <img src="./photos/daisy-pedicure.webp" alt="" />
-              <img src="./photos/gilded-stiletto.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/pink-blossom-square.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/burgundy-set.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/daisy-pedicure.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/gilded-stiletto.webp" alt="" />
             </div>
             <div class="plates__set">
-              <img src="./photos/orchid-coffin.webp" alt="" />
-              <img src="./photos/tortoiseshell-stiletto.webp" alt="" />
-              <img src="./photos/sunshine-yellow.webp" alt="" />
-              <img src="./photos/charm-pedicure.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/orchid-coffin.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/tortoiseshell-stiletto.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/sunshine-yellow.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/charm-pedicure.webp" alt="" />
             </div>
             <div class="plates__set">
-              <img src="./photos/green-floral-tips.webp" alt="" />
-              <img src="./photos/cocoa-bow-almond.webp" alt="" />
-              <img src="./photos/tangerine-tips.webp" alt="" />
-              <img src="./photos/pink-airbrush.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/green-floral-tips.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/cocoa-bow-almond.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/tangerine-tips.webp" alt="" />
+              <img loading="lazy" decoding="async" src="./photos/pink-airbrush.webp" alt="" />
             </div>
           </div>
           <h2 class="intro__title" id="intro-title"><span>Tubo</span><span>Nails</span></h2>
@@ -123,7 +126,7 @@
               <span class="post__more" aria-hidden="true">•••</span>
             </header>
             <div class="post__media">
-              <video src="./media/reel.mp4" poster="./media/reel.webp" muted loop playsinline preload="metadata" aria-label="A reel of nail sets done at Tubo"></video>
+              <video data-src="./media/reel.mp4" data-poster="./media/reel.webp" muted loop playsinline preload="none" aria-label="A reel of nail sets done at Tubo"></video>
             </div>
             <footer class="post__foot" aria-hidden="true">
               <span class="post__icons"><b class="heart">♥</b> <b>◯</b> <b>➤</b></span>
@@ -144,14 +147,14 @@
           </div>
           <div class="deck" aria-roledescription="carousel" aria-label="Nail sets from the salon">
             <div class="deck__cards">
-              <figure class="deck__card" data-caption="Pink bloom stilettos with 3D flowers"><img src="./photos/pink-bloom-stiletto.webp" alt="Long pink stiletto nails with zebra tips and pink 3D flowers" /></figure>
-              <figure class="deck__card" data-caption="Crystal coffins with sculpted petals"><img src="./photos/crystal-3d-coffin.webp" alt="White French coffin nails with crystals and sculpted white petals" /></figure>
-              <figure class="deck__card" data-caption="Cocoa chrome with pearl bows"><img src="./photos/chrome-bow-stiletto.webp" alt="Brown ombré stiletto nails with small white bows" /></figure>
-              <figure class="deck__card" data-caption="Black lacquer mani-pedi, hand-painted daisies"><img src="./photos/black-white-flowers.webp" alt="Glossy black nails and toes with white painted flowers" /></figure>
-              <figure class="deck__card" data-caption="Flame French in tangerine"><img src="./photos/orange-flame.webp" alt="Square nails with orange flame French tips and orange flowers" /></figure>
-              <figure class="deck__card" data-caption="Lilac ombré, hands and toes to match"><img src="./photos/lilac-ombre.webp" alt="Matching lilac ombré manicure and pedicure" /></figure>
-              <figure class="deck__card" data-caption="Leopard and lace stilettos"><img src="./photos/leopard-stiletto.webp" alt="Stiletto nails with leopard print, black tips and a pink flower" /></figure>
-              <figure class="deck__card" data-caption="Red hibiscus on a sheer pink base"><img src="./photos/red-hibiscus.webp" alt="Square nails with red outlines and painted red flowers" /></figure>
+              <figure class="deck__card" data-caption="Pink bloom stilettos with 3D flowers"><img loading="lazy" decoding="async" src="./photos/pink-bloom-stiletto.webp" alt="Long pink stiletto nails with zebra tips and pink 3D flowers" /></figure>
+              <figure class="deck__card" data-caption="Crystal coffins with sculpted petals"><img loading="lazy" decoding="async" src="./photos/crystal-3d-coffin.webp" alt="White French coffin nails with crystals and sculpted white petals" /></figure>
+              <figure class="deck__card" data-caption="Cocoa chrome with pearl bows"><img loading="lazy" decoding="async" src="./photos/chrome-bow-stiletto.webp" alt="Brown ombré stiletto nails with small white bows" /></figure>
+              <figure class="deck__card" data-caption="Black lacquer mani-pedi, hand-painted daisies"><img loading="lazy" decoding="async" src="./photos/black-white-flowers.webp" alt="Glossy black nails and toes with white painted flowers" /></figure>
+              <figure class="deck__card" data-caption="Flame French in tangerine"><img loading="lazy" decoding="async" src="./photos/orange-flame.webp" alt="Square nails with orange flame French tips and orange flowers" /></figure>
+              <figure class="deck__card" data-caption="Lilac ombré, hands and toes to match"><img loading="lazy" decoding="async" src="./photos/lilac-ombre.webp" alt="Matching lilac ombré manicure and pedicure" /></figure>
+              <figure class="deck__card" data-caption="Leopard and lace stilettos"><img loading="lazy" decoding="async" src="./photos/leopard-stiletto.webp" alt="Stiletto nails with leopard print, black tips and a pink flower" /></figure>
+              <figure class="deck__card" data-caption="Red hibiscus on a sheer pink base"><img loading="lazy" decoding="async" src="./photos/red-hibiscus.webp" alt="Square nails with red outlines and painted red flowers" /></figure>
             </div>
             <div class="deck__fog" aria-hidden="true"></div>
             <div class="deck__bar">
@@ -181,7 +184,7 @@
           <p class="reveal__name"><span class="pearl" data-text="Tubo">Tubo</span></p>
           <p class="reveal__sub eyebrow">Make yourself at home</p>
           <div class="reveal__frame">
-            <video src="./media/lobby.mp4" poster="./media/lobby.webp" muted loop playsinline preload="metadata" aria-label="The Tubo lobby: nail stations, lounge and reception"></video>
+            <video data-src="./media/lobby.mp4" data-poster="./media/lobby.webp" data-src-portrait="./media/lobby-portrait.mp4" data-poster-portrait="./media/lobby-portrait.webp" muted loop playsinline preload="none" aria-label="The Tubo lobby: nail stations, lounge and reception"></video>
             <h2 class="reveal__headline">Your chair<br />is ready</h2>
           </div>
         </div>
@@ -196,7 +199,7 @@
         </header>
         <div class="menu">
           <article class="menu__group">
-            <img class="menu__media" src="./photos/classic-french.webp" alt="" loading="lazy" />
+            <img class="menu__media" src="./photos/classic-french.webp" alt="" loading="lazy" decoding="async" />
             <h3>Manicures</h3>
             <ul>
               <li><span>Classic manicure</span><i>30 min</i></li>
@@ -207,7 +210,7 @@
             </ul>
           </article>
           <article class="menu__group">
-            <img class="menu__media" src="./photos/blush-flower-pedicure.webp" alt="" loading="lazy" />
+            <img class="menu__media" src="./photos/blush-flower-pedicure.webp" alt="" loading="lazy" decoding="async" />
             <h3>Pedicures</h3>
             <ul>
               <li><span>Classic pedicure</span><i>45 min</i></li>
@@ -217,7 +220,7 @@
             </ul>
           </article>
           <article class="menu__group">
-            <img class="menu__media" src="./photos/crystal-3d-coffin.webp" alt="" loading="lazy" />
+            <img class="menu__media" src="./photos/crystal-3d-coffin.webp" alt="" loading="lazy" decoding="async" />
             <h3>Nail Art</h3>
             <ul>
               <li><span>French &amp; ombré</span><i>Add-on</i></li>
@@ -227,7 +230,7 @@
             </ul>
           </article>
           <article class="menu__group">
-            <img class="menu__media" src="./photos/station.webp" alt="" loading="lazy" />
+            <img class="menu__media" src="./photos/station.webp" alt="" loading="lazy" decoding="async" />
             <h3>Makeup, Brows &amp; Lashes</h3>
             <ul>
               <li><span>Soft glam makeup</span><i>60 min</i></li>
@@ -238,7 +241,7 @@
             </ul>
           </article>
           <article class="menu__group">
-            <img class="menu__media" src="./photos/lounge.webp" alt="" loading="lazy" />
+            <img class="menu__media" src="./photos/lounge.webp" alt="" loading="lazy" decoding="async" />
             <h3>Facials &amp; Body</h3>
             <ul>
               <li><span>Express facial</span><i>30 min</i></li>
