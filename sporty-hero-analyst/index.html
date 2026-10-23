@@ -1,0 +1,793 @@
+<title>Sporty Hero Analyst</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Round-history statistics, strategy simulator, session limits and an AI analyst for the Sporty Hero crash game.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a flight-deck console. Sticky tab bar, then one working panel per tab; instrument readouts in mono, multipliers colour-coded like the game's history bar. */
+:root {
+  --bg: #eef1f4;
+  --panel: #ffffff;
+  --sunk: #e3e8ee;
+  --line: #cfd7e0;
+  --fg: #142030;
+  --muted: #5a6878;
+  --accent: #c76a05;        /* cash-out amber */
+  --accent-ink: #ffffff;
+  --low: #c23a2b;           /* crashed under 2x */
+  --mid: #0d7f63;           /* 2x – 10x */
+  --high: #b25a00;          /* 10x and above */
+  --chip-ink: #ffffff;
+  --warn-bg: #fff3dd;
+  --warn-fg: #7a4300;
+  --stop-bg: #fde6e2;
+  --stop-fg: #8c1f14;
+  --ok-bg: #e0f3ec;
+  --ok-fg: #0b5a46;
+  --theory: #6b7c90;
+  --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e151e; --panel: #16202c; --sunk: #1d2937; --line: #2a3848; --fg: #e4ebf2; --muted: #93a3b5;
+    --accent: #f29a2e; --accent-ink: #1a1006; --low: #c9473a; --mid: #13866a; --high: #b8650c; --chip-ink: #ffffff;
+    --warn-bg: #3a2a10; --warn-fg: #ffd08a; --stop-bg: #3d1915; --stop-fg: #ffb3a8; --ok-bg: #0f3127; --ok-fg: #8fe3c6;
+    --theory: #8ea0b4; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e151e; --panel: #16202c; --sunk: #1d2937; --line: #2a3848; --fg: #e4ebf2; --muted: #93a3b5;
+  --accent: #f29a2e; --accent-ink: #1a1006; --low: #c9473a; --mid: #13866a; --high: #b8650c; --chip-ink: #ffffff;
+  --warn-bg: #3a2a10; --warn-fg: #ffd08a; --stop-bg: #3d1915; --stop-fg: #ffb3a8; --ok-bg: #0f3127; --ok-fg: #8fe3c6;
+  --theory: #8ea0b4; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.top { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding-block: 14px 6px; }
+.brand h1 { font-family: var(--f-display); font-weight: 700; font-size: 28px; letter-spacing: .02em; margin: 0; text-transform: uppercase; line-height: 1; }
+.brand h1 b { color: var(--accent); font-weight: 700; }
+.brand p { margin: 0; color: var(--muted); font-size: 13px; }
+nav.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs button { font: 600 15px/1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; background: none; border: 0; color: var(--muted); padding: 12px 12px 11px; border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
+nav.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+nav.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+main { padding-block: 20px 48px; }
+section.view { display: grid; gap: 18px; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 22px; letter-spacing: .02em; margin: 0; text-wrap: balance; }
+h3 { font-family: var(--f-display); font-weight: 600; font-size: 17px; letter-spacing: .05em; text-transform: uppercase; margin: 0; color: var(--muted); }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 68ch; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.grid2 { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+.kpis { display: grid; gap: 1px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.kpi { background: var(--panel); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
+.kpi .k { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.kpi .v { font: 500 24px/1.15 var(--f-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.kpi .s { font-size: 12.5px; color: var(--muted); }
+.mono, td.n, th.n { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.banner { border-radius: var(--r); padding: 12px 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.banner.example { background: var(--sunk); color: var(--fg); border: 1px dashed var(--line); }
+.banner.warn { background: var(--warn-bg); color: var(--warn-fg); }
+.banner.stop { background: var(--stop-bg); color: var(--stop-fg); }
+.banner.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.banner strong { font-weight: 600; }
+.banner .grow { flex: 1 1 240px; min-width: 0; }
+.verdict { border-left: 4px solid var(--mid); padding: 10px 14px; background: var(--sunk); border-radius: 0 var(--r) var(--r) 0; }
+.verdict.flag { border-left-color: var(--accent); }
+.strip { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font: 500 12px/1 var(--f-mono); padding: 5px 7px; border-radius: 999px; color: var(--chip-ink); font-variant-numeric: tabular-nums; }
+.chip.low { background: var(--low); } .chip.mid { background: var(--mid); } .chip.high { background: var(--high); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-weight: 500; color: var(--muted); font-size: 12.5px; letter-spacing: .04em; }
+td.n, th.n { text-align: right; }
+.good { color: var(--mid); } .bad { color: var(--low); }
+label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+input, select, textarea { font: 15px var(--f-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+textarea { font-family: var(--f-mono); font-size: 14px; resize: vertical; min-height: 110px; }
+.form { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.check { display: flex; gap: 8px; align-items: center; color: var(--fg); font-size: 14px; }
+.check input { width: auto; }
+button.btn { font: 600 14px/1 var(--f-body); border-radius: 8px; padding: 10px 14px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; }
+button.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.btn.ghost { background: none; }
+button.btn:disabled { opacity: .5; cursor: default; }
+.hint { font-size: 13px; color: var(--muted); }
+svg text { fill: var(--muted); font-family: var(--f-mono); font-size: 11px; }
+svg .grid { stroke: var(--line); stroke-width: 1; }
+svg .theory { stroke: var(--theory); stroke-width: 2; stroke-dasharray: 5 4; fill: none; }
+svg .obs { stroke: var(--accent); stroke-width: 2.5; fill: none; }
+svg .bar { fill: var(--accent); }
+svg .bar.neg { fill: var(--low); }
+svg .zero { stroke: var(--fg); stroke-width: 1; }
+svg .limit { stroke: var(--low); stroke-width: 1; stroke-dasharray: 4 4; }
+svg .dot { fill: var(--accent); }
+.chart { width: 100%; height: auto; display: block; }
+.chat { display: grid; gap: 12px; }
+.msg { padding: 12px 14px; border-radius: var(--r); white-space: pre-wrap; max-width: 75ch; min-width: 0; overflow-wrap: anywhere; }
+.msg.user { background: var(--sunk); justify-self: end; }
+.msg.ai { background: var(--panel); border: 1px solid var(--line); }
+.msg .who { display: block; font: 600 12px/1 var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.prompts { display: flex; flex-wrap: wrap; gap: 8px; }
+.prompts button { font: 14px var(--f-body); border: 1px solid var(--line); background: var(--panel); color: var(--fg); padding: 8px 12px; border-radius: 999px; cursor: pointer; }
+.facts { display: grid; gap: 8px; padding-left: 18px; margin: 0; max-width: 72ch; }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-block: 18px 28px; display: grid; gap: 6px; }
+footer a, .lede a { color: inherit; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Sporty Hero <b>Analyst</b></h1>
+      <p>Statistics for your round history. It cannot predict the next crash, and it tells you so.</p>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" id="tab-analysis" data-view="analysis" aria-selected="true">Analysis</button>
+      <button role="tab" id="tab-rounds" data-view="rounds" aria-selected="false">Rounds</button>
+      <button role="tab" id="tab-lab" data-view="lab" aria-selected="false">Strategy lab</button>
+      <button role="tab" id="tab-session" data-view="session" aria-selected="false">Session guard</button>
+      <button role="tab" id="tab-ask" data-view="ask" aria-selected="false">Ask the analyst</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ANALYSIS -->
+  <section class="view" id="view-analysis" role="tabpanel" aria-labelledby="tab-analysis">
+    <div class="banner example" id="exampleBanner" hidden>
+      <span class="grow"><strong>Example data.</strong> These rounds were generated from the game's published odds so you can see how the analyst works. Add your own history on the Rounds tab.</span>
+      <button class="btn" data-goto="rounds">Add my rounds</button>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h3>Last 60 rounds, newest on the right</h3>
+        <div class="legend"><span><i style="background:var(--low)"></i>under 2x</span><span><i style="background:var(--mid)"></i>2x – 9.99x</span><span><i style="background:var(--high)"></i>10x and up</span></div>
+      </div>
+      <div class="strip" id="strip"></div>
+    </div>
+    <div class="card">
+      <h3>Verdict</h3>
+      <div id="verdict"></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>How often each multiplier is reached</h3>
+        <p class="hint">Share of rounds that flew at least this far. Dashed line: what the game's return-to-player rate implies (<span id="rtpLabel">97%</span> ÷ multiplier).</p>
+        <svg class="chart" id="survChart" viewBox="0 0 640 280" role="img" aria-label="Observed versus expected share of rounds reaching each multiplier"></svg>
+        <div class="legend"><span><i style="background:var(--accent)"></i>your rounds</span><span><i style="background:var(--theory)"></i>expected</span></div>
+      </div>
+      <div class="card">
+        <h3>If you had auto-cashed at a fixed target</h3>
+        <p class="hint">Return per 1 staked on every round in your history. Above 1.00 is a profit, and short histories swing far from the long-run rate.</p>
+        <div class="tablewrap"><table id="targetTable"></table></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Does a cold streak make 2x more likely?</h3>
+        <p class="hint">After a run of crashes under 2x, how often did the next round reach 2x? If rounds are independent, every row should sit near the baseline.</p>
+        <div class="tablewrap"><table id="streakTable"></table></div>
+      </div>
+      <div class="card">
+        <h3>Randomness checks</h3>
+        <div class="tablewrap"><table id="testTable"></table></div>
+        <p class="hint">A p-value under 0.01 means the pattern would be unusual for a fair game. Small histories (under 200 rounds) rarely show anything either way.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROUNDS -->
+  <section class="view" id="view-rounds" role="tabpanel" aria-labelledby="tab-rounds" hidden>
+    <div>
+      <h2>Your round history</h2>
+      <p class="lede">Copy the multipliers from the game's history bar or round history and paste them here. Any separator works: spaces, commas, new lines, with or without the "x".</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <label for="pasteBox">Multipliers</label>
+        <textarea id="pasteBox" placeholder="1.24x 3.80x 1.00x 12.55x 1.67x 2.03x"></textarea>
+        <label class="check"><input type="checkbox" id="newestFirst" checked> The list starts with the most recent round</label>
+        <div class="row">
+          <button class="btn primary" id="addRounds">Add rounds</button>
+          <button class="btn" id="replaceRounds">Replace history</button>
+          <span class="hint" id="pasteMsg" role="status"></span>
+        </div>
+      </div>
+      <div class="card" id="shotCard" hidden>
+        <h3>Read a screenshot</h3>
+        <p class="hint">Pick a screenshot of the round history. The analyst reads the multipliers into the box on the left so you can check them before adding.</p>
+        <input type="file" id="shotFile" accept="image/png,image/jpeg,image/webp">
+        <div class="row"><button class="btn" id="readShot" disabled>Read multipliers</button><span class="hint" id="shotMsg" role="status"></span></div>
+      </div>
+      <div class="card">
+        <h3>Settings</h3>
+        <div class="form">
+          <label for="rtp">Return to player (%)<input id="rtp" type="number" min="80" max="99.9" step="0.1"></label>
+          <label for="cur">Currency symbol<input id="cur" type="text" maxlength="4"></label>
+        </div>
+        <p class="hint">Check the RTP in the game's rules screen. 97% is typical for crash games.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h3 id="histTitle">History</h3>
+        <div class="row">
+          <button class="btn ghost" id="undoLast">Remove newest round</button>
+          <button class="btn ghost" id="clearRounds">Clear all</button>
+        </div>
+      </div>
+      <div class="banner stop" id="clearConfirm" hidden>
+        <span class="grow">Delete every round in your history? This cannot be undone.</span>
+        <button class="btn" id="clearYes">Delete all</button><button class="btn ghost" id="clearNo">Keep</button>
+      </div>
+      <div class="strip" id="fullStrip"></div>
+    </div>
+  </section>
+
+  <!-- LAB -->
+  <section class="view" id="view-lab" role="tabpanel" aria-labelledby="tab-lab" hidden>
+    <div>
+      <h2>Strategy lab</h2>
+      <p class="lede">Play thousands of simulated sessions with a strategy before you risk real money. Rounds are drawn from the game's odds, or replayed at random from your own history.</p>
+    </div>
+    <div class="card">
+      <div class="form">
+        <label for="mBank">Bankroll<input id="mBank" type="number" min="1" value="5000"></label>
+        <label for="mStake">Base stake<input id="mStake" type="number" min="1" value="100"></label>
+        <label for="mTarget">Auto cash-out at (x)<input id="mTarget" type="number" min="1.01" step="0.01" value="2"></label>
+        <label for="mRounds">Rounds per session<input id="mRounds" type="number" min="1" max="2000" value="100"></label>
+        <label for="mGoal">Stop when ahead by (0 = never)<input id="mGoal" type="number" min="0" value="0"></label>
+        <label for="mStrat">Staking
+          <select id="mStrat">
+            <option value="flat">Flat: same stake every round</option>
+            <option value="martingale">Martingale: double after a loss</option>
+            <option value="paroli">Paroli: double after a win, reset after 3</option>
+          </select>
+        </label>
+        <label for="mSource">Rounds come from
+          <select id="mSource">
+            <option value="model">The game's odds</option>
+            <option value="history">My history (resampled)</option>
+          </select>
+        </label>
+        <button class="btn primary" id="runSim">Run 3,000 sessions</button>
+      </div>
+    </div>
+    <div class="kpis" id="simKpis"></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Where sessions finished</h3>
+        <p class="hint">Profit or loss at the end of each simulated session.</p>
+        <svg class="chart" id="simChart" viewBox="0 0 640 260" role="img" aria-label="Histogram of session results"></svg>
+      </div>
+      <div class="card">
+        <h3>What the numbers say</h3>
+        <div id="simNotes"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SESSION -->
+  <section class="view" id="view-session" role="tabpanel" aria-labelledby="tab-session" hidden>
+    <div>
+      <h2>Session guard</h2>
+      <p class="lede">Log each bet as you play. The guard keeps score and tells you plainly when you reach the limits you set before you started.</p>
+    </div>
+    <div class="banner" id="guardBanner"></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Log a bet</h3>
+        <form class="form" id="betForm">
+          <label for="bStake">Stake<input id="bStake" type="number" min="0.01" step="0.01" value="100" required></label>
+          <label for="bOut">Cashed out at (x), blank if it crashed first<input id="bOut" type="number" min="1" step="0.01" placeholder="crashed"></label>
+          <button class="btn primary" type="submit">Log bet</button>
+        </form>
+        <div class="row"><button class="btn ghost" id="undoBet">Remove last bet</button><button class="btn ghost" id="newSession">Start a new session</button></div>
+      </div>
+      <div class="card">
+        <h3>Limits for this session</h3>
+        <div class="form">
+          <label for="lossLimit">Stop if down by<input id="lossLimit" type="number" min="0"></label>
+          <label for="timeLimit">Stop after (minutes)<input id="timeLimit" type="number" min="0"></label>
+        </div>
+        <p class="hint">Set these before your first bet and treat them as final. The guard warns at 75% and calls stop at 100%.</p>
+      </div>
+    </div>
+    <div class="kpis" id="sessKpis"></div>
+    <div class="card">
+      <h3>Running profit and loss</h3>
+      <svg class="chart" id="pnlChart" viewBox="0 0 640 200" role="img" aria-label="Running profit and loss for this session"></svg>
+      <div class="tablewrap"><table id="betTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ASK -->
+  <section class="view" id="view-ask" role="tabpanel" aria-labelledby="tab-ask" hidden>
+    <div>
+      <h2>Ask the analyst</h2>
+      <p class="lede">The analyst reads the statistics from your history, your last simulation and your session log, then answers in plain language. It explains odds and risk. It will not call the next round, because no one can.</p>
+    </div>
+    <div class="banner warn" id="aiOff" hidden><span class="grow">The AI analyst works when this page is opened in Claude. Every other tab works without it.</span></div>
+    <div class="prompts" id="prompts">
+      <button data-q="Is there any pattern in my rounds I could use?">Is there a pattern I can use?</button>
+      <button data-q="What does auto cash-out at 2x really cost me over 500 rounds?">What does 2x really cost me?</button>
+      <button data-q="Explain my last Strategy lab result in plain words. Would a different strategy beat the game?">Explain my simulation</button>
+      <button data-q="Look at my session log and limits. How am I doing and what should I do next?">How is my session going?</button>
+      <button data-q="I keep hearing about Sporty Hero predictor apps and signals. Do they work?">Do predictor apps work?</button>
+    </div>
+    <div class="chat" id="chat" aria-live="polite"></div>
+    <form class="row" id="askForm">
+      <label for="askBox" style="flex:1 1 280px">Your question<input id="askBox" type="text" placeholder="Ask about your rounds, a strategy or your session" autocomplete="off"></label>
+      <button class="btn primary" type="submit" id="askBtn">Ask</button>
+      <button class="btn" type="button" id="stopBtn" hidden>Stop</button>
+    </form>
+  </section>
+
+  <footer>
+    <p>Each Sporty Hero round is decided by the game's random generator before it starts. Past rounds do not change the odds of the next one, and every staking plan loses about <span id="footEdge">3%</span> of what you stake over time.</p>
+    <p>If betting stops being fun, take a break. Free, confidential help: <a href="https://www.gamblersanonymous.org/" rel="noopener" target="_blank">Gamblers Anonymous</a> · <a href="https://www.begambleaware.org/" rel="noopener" target="_blank">BeGambleAware</a> · or use SportyBet's own deposit limits and self-exclusion in your account settings.</p>
+    <p>Not affiliated with SportyBet. Your rounds and bets are saved only in this browser.</p>
+  </footer>
+</main>
+
+<script>
+(() => {
+"use strict";
+
+// ---------- state ----------
+const KEY = "sporty-hero-analyst.v1";
+const S = {
+  rounds: [], sampleRounds: true,
+  bets: [], sampleBets: true, sessionStart: null,
+  rtp: 97, cur: "₦", lossLimit: 2000, timeLimit: 45,
+  sim: null,
+};
+function save() {
+  const { sim, ...keep } = S;
+  try { localStorage.setItem(KEY, JSON.stringify({ ...keep, simSummary: sim ? sim.summary : null })); } catch (e) {}
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    for (const k of ["rounds", "sampleRounds", "bets", "sampleBets", "sessionStart", "rtp", "cur", "lossLimit", "timeLimit"]) if (k in d) S[k] = d[k];
+    if (d.simSummary) S.sim = { summary: d.simSummary, finals: null };
+    return true;
+  } catch (e) { return false; }
+}
+
+// ---------- maths ----------
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const rtp = () => S.rtp / 100;
+// Crash point with P(X >= m) = rtp / m, floored to 2 decimals like the game shows.
+function drawCrash(rand, r) { const u = rand(); const m = Math.floor(100 * r / Math.max(1 - u, 1e-9)) / 100; return Math.min(Math.max(m, 1), 1e6); }
+const surv = (m) => m <= 1 ? 1 : Math.min(1, rtp() / m);
+function median(a) { if (!a.length) return NaN; const s = [...a].sort((x, y) => x - y); const i = s.length >> 1; return s.length % 2 ? s[i] : (s[i - 1] + s[i]) / 2; }
+function gammaln(x) { const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5]; let y = x, t = x + 5.5; t -= (x + 0.5) * Math.log(t); let s = 1.000000000190015; for (const ci of c) s += ci / ++y; return -t + Math.log(2.5066282746310005 * s / x); }
+function gammaQ(a, x) { // upper regularized incomplete gamma
+  if (x <= 0) return 1;
+  if (x < a + 1) { let sum = 1 / a, del = sum, ap = a; for (let n = 0; n < 300; n++) { ap++; del *= x / ap; sum += del; if (Math.abs(del) < Math.abs(sum) * 1e-12) break; } return 1 - sum * Math.exp(-x + a * Math.log(x) - gammaln(a)); }
+  let b = x + 1 - a, c = 1e300, d = 1 / b, h = d;
+  for (let i = 1; i < 300; i++) { const an = -i * (i - a); b += 2; d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300; c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300; d = 1 / d; const del = d * c; h *= del; if (Math.abs(del - 1) < 1e-12) break; }
+  return Math.exp(-x + a * Math.log(x) - gammaln(a)) * h;
+}
+function erf(x) { const t = 1 / (1 + 0.3275911 * Math.abs(x)); const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y; }
+const normP2 = (z) => 1 - erf(Math.abs(z) / Math.SQRT2); // two-sided p
+function wilson(k, n) { if (!n) return [NaN, NaN]; const z = 1.96, p = k / n, d = 1 + z * z / n, c = (p + z * z / (2 * n)) / d, h = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d; return [Math.max(0, c - h), Math.min(1, c + h)]; }
+
+const BIN_EDGES = [1, 1.2, 1.5, 2, 3, 5, 10, Infinity];
+function chiSquare(rs) {
+  const n = rs.length, obs = new Array(BIN_EDGES.length - 1).fill(0);
+  for (const m of rs) for (let i = 0; i < obs.length; i++) if (m >= BIN_EDGES[i] && m < BIN_EDGES[i + 1]) { obs[i]++; break; }
+  let x2 = 0;
+  obs.forEach((o, i) => { const p = surv(BIN_EDGES[i]) - (BIN_EDGES[i + 1] === Infinity ? 0 : surv(BIN_EDGES[i + 1])); const e = p * n; x2 += (o - e) ** 2 / e; });
+  const df = obs.length - 1;
+  return { x2, df, p: gammaQ(df / 2, x2 / 2) };
+}
+function runsTest(rs, t = 2) {
+  const s = rs.map((m) => m >= t), n1 = s.filter(Boolean).length, n2 = s.length - n1, n = s.length;
+  if (n1 < 2 || n2 < 2) return null;
+  let runs = 1; for (let i = 1; i < n; i++) if (s[i] !== s[i - 1]) runs++;
+  const mu = 2 * n1 * n2 / n + 1, v = 2 * n1 * n2 * (2 * n1 * n2 - n) / (n * n * (n - 1));
+  const z = (runs - mu) / Math.sqrt(v);
+  return { runs, mu, z, p: normP2(z) };
+}
+function lag1(rs) { // correlation between consecutive log multipliers
+  if (rs.length < 10) return null;
+  const x = rs.map(Math.log), n = x.length - 1; let ma = 0, mb = 0;
+  for (let i = 0; i < n; i++) { ma += x[i]; mb += x[i + 1]; } ma /= n; mb /= n;
+  let sab = 0, saa = 0, sbb = 0; for (let i = 0; i < n; i++) { const a = x[i] - ma, b = x[i + 1] - mb; sab += a * b; saa += a * a; sbb += b * b; }
+  if (!saa || !sbb) return null;
+  const r = sab / Math.sqrt(saa * sbb);
+  return { r, p: normP2(r * Math.sqrt(n)) };
+}
+function streaks(rs) {
+  const out = [];
+  for (let k = 1; k <= 6; k++) {
+    let n = 0, hit = 0, run = 0;
+    for (let i = 0; i < rs.length; i++) { if (run >= k) { n++; if (rs[i] >= 2) hit++; } run = rs[i] < 2 ? run + 1 : 0; }
+    out.push({ k, n, hit, rate: n ? hit / n : NaN, ci: wilson(hit, n) });
+  }
+  return out;
+}
+function longestLow(rs) { let best = 0, run = 0; for (const m of rs) { run = m < 2 ? run + 1 : 0; best = Math.max(best, run); } return best; }
+
+function analyse() {
+  const rs = S.rounds, n = rs.length;
+  if (!n) return null;
+  const targets = [1.2, 1.5, 2, 3, 5, 10, 20].map((t) => { const hits = rs.filter((m) => m >= t).length; return { t, hits, ret: hits * t / n }; });
+  const q = 1 - surv(2);
+  return {
+    n, median: median(rs), max: Math.max(...rs),
+    share2: rs.filter((m) => m >= 2).length / n, share10: rs.filter((m) => m >= 10).length / n,
+    targets, chi: n >= 60 ? chiSquare(rs) : null, runs: runsTest(rs), lag: lag1(rs), streaks: streaks(rs),
+    longest: longestLow(rs), longestExp: n * (1 - q) > 1 ? Math.log(n * (1 - q)) / Math.log(1 / q) : 0,
+  };
+}
+
+// ---------- formatting ----------
+const $ = (id) => document.getElementById(id);
+const pct = (x, d = 1) => isFinite(x) ? (100 * x).toFixed(d) + "%" : "–";
+const fx = (m) => m >= 1000 ? Math.round(m).toLocaleString() + "x" : m.toFixed(2) + "x";
+const money = (v, sign = false) => { if (!isFinite(v)) return "–"; const s = Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: Math.abs(v) < 100 ? 2 : 0 }); return (v < 0 ? "−" : sign && v > 0 ? "+" : "") + S.cur + s; };
+const pfmt = (p) => !isFinite(p) ? "–" : p < 0.001 ? "< 0.001" : p.toFixed(3);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const cls = (m) => m < 2 ? "low" : m < 10 ? "mid" : "high";
+const kpi = (k, v, s = "") => `<div class="kpi"><span class="k">${k}</span><span class="v">${v}</span>${s ? `<span class="s">${s}</span>` : ""}</div>`;
+const chips = (rs) => rs.map((m) => `<span class="chip ${cls(m)}">${fx(m)}</span>`).join("");
+
+// ---------- analysis view ----------
+function renderAnalysis() {
+  $("exampleBanner").hidden = !S.sampleRounds;
+  $("rtpLabel").textContent = S.rtp + "%";
+  $("footEdge").textContent = +(100 - S.rtp).toFixed(1) + "%";
+  const a = analyse();
+  if (!a) {
+    $("kpis").innerHTML = kpi("Rounds", "0", "Add rounds to begin");
+    for (const id of ["strip", "targetTable", "streakTable", "testTable", "survChart"]) $(id).innerHTML = "";
+    $("verdict").className = "verdict flag";
+    $("verdict").innerHTML = `<p>No rounds yet. Paste your history on the Rounds tab.</p>`;
+    return;
+  }
+  $("kpis").innerHTML =
+    kpi("Rounds", a.n.toLocaleString(), S.sampleRounds ? "example data" : "in your history") +
+    kpi("Median crash", fx(a.median), `expected ${fx(rtp() * 2)}`) +
+    kpi("Reached 2x", pct(a.share2), `expected ${pct(surv(2))}`) +
+    kpi("Reached 10x", pct(a.share10), `expected ${pct(surv(10))}`) +
+    kpi("Longest run under 2x", a.longest, `typical for ${a.n.toLocaleString()} rounds: about ${Math.round(a.longestExp)}`) +
+    kpi("Highest", fx(a.max));
+  $("strip").innerHTML = chips(S.rounds.slice(-60));
+
+  const flags = [];
+  if (a.chi && a.chi.p < 0.01) flags.push("the spread of multipliers differs from the published odds");
+  if (a.runs && a.runs.p < 0.01) flags.push("wins and losses at 2x clump together more (or less) than chance");
+  if (a.lag && a.lag.p < 0.01) flags.push("consecutive rounds look correlated");
+  const v = $("verdict");
+  if (a.n < 100) {
+    v.className = "verdict flag";
+    v.innerHTML = `<p><strong>Too few rounds to say much.</strong> With ${a.n} rounds, random swings are larger than any real effect could be. Add at least 200 for meaningful checks. Even then, the statistics describe the past only.</p>`;
+  } else if (flags.length) {
+    v.className = "verdict flag";
+    v.innerHTML = `<p><strong>Something looks unusual:</strong> ${flags.join("; ")}. With several checks, one will come up by luck now and then, so first make sure the history was pasted completely and in the right order. Even a real deviation would not tell you when the next big multiplier comes.</p>`;
+  } else {
+    v.className = "verdict";
+    v.innerHTML = `<p><strong>No usable pattern.</strong> Across ${a.n.toLocaleString()} rounds, the multipliers match the game's published odds and show no streak effect. The next round is as likely to crash early after ten reds as after ten greens. The only things you control are how much you stake and when you stop.</p>`;
+  }
+
+  $("targetTable").innerHTML = `<thead><tr><th>Cash out at</th><th class="n">Would have won</th><th class="n">Return per 1</th><th class="n">Long-run</th></tr></thead><tbody>` +
+    a.targets.map((r) => `<tr><td class="mono">${fx(r.t)}</td><td class="n">${r.hits} of ${a.n} (${pct(r.hits / a.n)})</td><td class="n ${r.ret >= 1 ? "good" : "bad"}">${r.ret.toFixed(3)}</td><td class="n">${rtp().toFixed(3)}</td></tr>`).join("") + `</tbody>`;
+
+  $("streakTable").innerHTML = `<thead><tr><th>Reds in a row before</th><th class="n">Cases</th><th class="n">Next reached 2x</th><th class="n">95% range</th></tr></thead><tbody>` +
+    `<tr><td>Any round (baseline)</td><td class="n">–</td><td class="n">${pct(surv(2))}</td><td class="n">–</td></tr>` +
+    a.streaks.map((r) => `<tr><td>${r.k} or more</td><td class="n">${r.n}</td><td class="n">${r.n ? pct(r.rate) : "–"}</td><td class="n">${r.n >= 5 ? pct(r.ci[0], 0) + " – " + pct(r.ci[1], 0) : "too few"}</td></tr>`).join("") + `</tbody>`;
+
+  const row = (name, what, stat, p) => `<tr><td>${name}<div class="hint">${what}</div></td><td class="n">${stat}</td><td class="n ${isFinite(p) && p < 0.01 ? "bad" : ""}">${pfmt(p)}</td></tr>`;
+  $("testTable").innerHTML = `<thead><tr><th>Check</th><th class="n">Result</th><th class="n">p-value</th></tr></thead><tbody>` +
+    (a.chi ? row("Fit to published odds", "Chi-square, 7 multiplier bands", `χ² ${a.chi.x2.toFixed(1)}`, a.chi.p) : row("Fit to published odds", "Needs 60+ rounds", "–", NaN)) +
+    (a.runs ? row("Streakiness at 2x", "Wald–Wolfowitz runs test", `${a.runs.runs} runs, expect ${a.runs.mu.toFixed(0)}`, a.runs.p) : row("Streakiness at 2x", "Needs wins and losses", "–", NaN)) +
+    (a.lag ? row("Round-to-round link", "Correlation of neighbours", `r = ${a.lag.r.toFixed(3)}`, a.lag.p) : row("Round-to-round link", "Needs 10+ rounds", "–", NaN)) + `</tbody>`;
+
+  drawSurvival();
+}
+
+function drawSurvival() {
+  const svg = $("survChart"), W = 640, H = 280, L = 46, R = 14, T = 12, B = 34;
+  const xs = (m) => L + (Math.log(m) / Math.log(100)) * (W - L - R), ys = (p) => T + (1 - p) * (H - T - B);
+  let g = "";
+  for (const p of [0, .25, .5, .75, 1]) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${ys(p)}" y2="${ys(p)}"/><text x="${L - 6}" y="${ys(p) + 4}" text-anchor="end">${p * 100}%</text>`;
+  for (const t of [1, 1.5, 2, 3, 5, 10, 20, 50, 100]) g += `<line class="grid" x1="${xs(t)}" x2="${xs(t)}" y1="${T}" y2="${H - B}"/><text x="${xs(t)}" y="${H - B + 16}" text-anchor="${t === 100 ? "end" : t === 1 ? "start" : "middle"}">${t}x</text>`;
+  const sorted = [...S.rounds].sort((a, b) => a - b), n = sorted.length;
+  const atLeast = (m) => { let lo = 0, hi = n; while (lo < hi) { const mid = (lo + hi) >> 1; if (sorted[mid] < m) lo = mid + 1; else hi = mid; } return (n - lo) / n; };
+  let th = "", ob = "";
+  for (let i = 0; i <= 160; i++) { const m = Math.pow(100, i / 160); const x = xs(m).toFixed(1); th += (i ? "L" : "M") + x + " " + ys(surv(m + 1e-9)).toFixed(1); ob += (i ? "L" : "M") + x + " " + ys(atLeast(m)).toFixed(1); }
+  svg.innerHTML = g + `<path class="theory" d="${th}"/><path class="obs" d="${ob}"/>`;
+}
+
+// ---------- rounds view ----------
+function parseMultipliers(text) {
+  const out = [];
+  for (const tok of String(text).match(/\d+(?:[.,]\d+)?/g) || []) { const v = parseFloat(tok.replace(",", ".")); if (v >= 1 && v < 1e7) out.push(Math.round(v * 100) / 100); }
+  return out;
+}
+function addFromBox(replace) {
+  const vals = parseMultipliers($("pasteBox").value);
+  if (!vals.length) { $("pasteMsg").textContent = "No multipliers found. Values must be 1.00 or higher."; return; }
+  if ($("newestFirst").checked) vals.reverse();
+  if (replace || S.sampleRounds) S.rounds = [];
+  S.rounds.push(...vals); S.sampleRounds = false;
+  $("pasteBox").value = ""; $("pasteMsg").textContent = `Added ${vals.length} rounds. History now holds ${S.rounds.length}.`;
+  save(); renderAll();
+}
+function renderRounds() {
+  $("rtp").value = S.rtp; $("cur").value = S.cur;
+  $("histTitle").textContent = S.sampleRounds ? `History: ${S.rounds.length} example rounds` : `History: ${S.rounds.length} rounds, oldest first`;
+  $("fullStrip").innerHTML = (S.rounds.length > 400 ? `<span class="hint">Showing the newest 400.</span>` : "") + chips(S.rounds.slice(-400));
+  $("undoLast").disabled = S.sampleRounds || !S.rounds.length;
+}
+
+// ---------- strategy lab ----------
+function simulate() {
+  const bank0 = +$("mBank").value, stake0 = +$("mStake").value, target = Math.max(1.01, +$("mTarget").value || 2), N = Math.min(2000, Math.max(1, Math.round(+$("mRounds").value || 1)));
+  const goal = Math.max(0, +$("mGoal").value || 0), strat = $("mStrat").value, source = $("mSource").value;
+  if (!(bank0 > 0 && stake0 > 0 && stake0 <= bank0)) { $("simNotes").innerHTML = `<p>Set a bankroll and a base stake no larger than the bankroll.</p>`; return; }
+  if (source === "history" && S.rounds.length < 30) { $("simNotes").innerHTML = `<p>Your history needs at least 30 rounds to resample from. Switch the source to the game's odds or add rounds.</p>`; return; }
+  const rand = mulberry32((Date.now() ^ 0x5bd1e995) >>> 0), r = rtp(), hist = S.rounds;
+  const next = source === "history" ? () => hist[Math.floor(rand() * hist.length)] : () => drawCrash(rand, r);
+  const SESS = 3000, finals = new Float64Array(SESS);
+  let busts = 0, ahead = 0, goalHits = 0, totalStaked = 0, maxStake = 0;
+  for (let s = 0; s < SESS; s++) {
+    let bank = bank0, stake = stake0, wins = 0;
+    for (let i = 0; i < N; i++) {
+      if (goal && bank - bank0 >= goal) { goalHits++; break; }
+      if (bank < stake0 - 1e-9) { busts++; break; }
+      const bet = Math.min(stake, bank);
+      if (bet > maxStake) maxStake = bet;
+      totalStaked += bet;
+      const win = next() >= target;
+      bank += win ? bet * (target - 1) : -bet;
+      if (strat === "martingale") stake = win ? stake0 : stake * 2;
+      else if (strat === "paroli") { if (win && ++wins < 3) stake *= 2; else { wins = 0; stake = stake0; } }
+    }
+    finals[s] = bank - bank0;
+    if (finals[s] > 0) ahead++;
+  }
+  const sorted = Array.from(finals).sort((a, b) => a - b);
+  const mean = sorted.reduce((a, b) => a + b, 0) / SESS, avgStaked = totalStaked / SESS;
+  S.sim = { finals: sorted, summary: {
+    bankroll: bank0, stake: stake0, target, roundsPerSession: N, stopWhenAhead: goal, strategy: strat, source, sessions: SESS,
+    meanResult: mean, medianResult: sorted[SESS >> 1], p10: sorted[Math.floor(SESS * .1)], p90: sorted[Math.floor(SESS * .9)],
+    shareAhead: ahead / SESS, shareBust: busts / SESS, shareGoal: goalHits / SESS,
+    avgStaked, lossPerStaked: avgStaked ? -mean / avgStaked : 0, largestStake: maxStake,
+  } };
+  save(); renderLab();
+}
+function renderLab() {
+  if (!S.sim) { $("simKpis").innerHTML = ""; $("simNotes").innerHTML = `<p>Set a plan and run it.</p>`; drawHist(); return; }
+  const m = S.sim.summary, edge = +(100 - S.rtp).toFixed(1);
+  $("simKpis").innerHTML =
+    kpi("Average result", esc(money(m.meanResult, true)), `per session of ${m.roundsPerSession} rounds`) +
+    kpi("Finished ahead", pct(m.shareAhead), `of ${m.sessions.toLocaleString()} sessions`) +
+    kpi("Went bust", pct(m.shareBust), `bankroll ${esc(money(m.bankroll))}`) +
+    kpi("Typical range", `${esc(money(m.p10, true))} to ${esc(money(m.p90, true))}`, "middle 80% of sessions") +
+    kpi("Lost per 100 staked", (100 * m.lossPerStaked).toFixed(2), `game edge: ${edge}`);
+  const name = { flat: "Flat staking", martingale: "Martingale", paroli: "Paroli" }[m.strategy];
+  const notes = [
+    `${name} at ${fx(m.target)}: you staked ${money(m.avgStaked)} per session on average and finished ${money(m.meanResult, true)}, which is ${pct(-m.lossPerStaked, 2)} of what you staked. The game keeps ${edge}% of every stake in the long run, and no staking plan changes that.`,
+    m.shareAhead > 0.5 ? `Most sessions finished ahead, but the losing ones were much larger. Many small wins paid for by a few big losses is the trade this plan makes.` : `Only ${pct(m.shareAhead)} of sessions finished ahead.`,
+    m.strategy === "martingale" ? `After a run of losses the stake reached ${money(m.largestStake)}, ${Math.round(m.largestStake / m.stake)} times the base stake.` : null,
+    m.stopWhenAhead ? `${pct(m.shareGoal)} of sessions reached the ${money(m.stopWhenAhead)} goal and stopped. A win goal changes how results are spread, not the average.` : null,
+    m.source === "history" ? `Rounds were resampled from your own history, so any lucky or unlucky stretch in it is baked into these results.` : null,
+  ].filter(Boolean);
+  $("simNotes").innerHTML = `<ul class="facts">${notes.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>`;
+  drawHist();
+}
+function drawHist() {
+  const svg = $("simChart"), f = S.sim && S.sim.finals;
+  if (!f) { svg.innerHTML = `<text x="320" y="130" text-anchor="middle">Run the simulation to see the spread</text>`; return; }
+  const W = 640, H = 260, L = 40, R = 12, T = 10, B = 34, bins = 30;
+  const lo = f[0], hi = f[f.length - 1], span = hi - lo || 1, w = span / bins, counts = new Array(bins).fill(0);
+  for (const v of f) counts[Math.min(bins - 1, Math.floor((v - lo) / w))]++;
+  const cmax = Math.max(...counts), bw = (W - L - R) / bins, xs = (v) => L + (v - lo) / span * (W - L - R);
+  let g = `<line class="grid" x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/>`;
+  counts.forEach((c, i) => { if (!c) return; const h = Math.max(1, c / cmax * (H - T - B)); const mid = lo + (i + .5) * w; g += `<rect class="bar${mid < 0 ? " neg" : ""}" x="${(L + i * bw + 1).toFixed(1)}" y="${(H - B - h).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${h.toFixed(1)}" rx="2"/>`; });
+  if (lo < 0 && hi > 0) g += `<line class="zero" x1="${xs(0)}" x2="${xs(0)}" y1="${T}" y2="${H - B}"/><text x="${xs(0)}" y="${H - B + 16}" text-anchor="middle">0</text>`;
+  g += `<text x="${L}" y="${H - B + 30}" text-anchor="start">${esc(money(lo, true))}</text><text x="${W - R}" y="${H - B + 30}" text-anchor="end">${esc(money(hi, true))}</text>`;
+  g += `<text x="${L - 6}" y="${T + 10}" text-anchor="end">${cmax}</text><text x="${L - 6}" y="${H - B}" text-anchor="end">0</text>`;
+  svg.innerHTML = g;
+}
+
+// ---------- session guard ----------
+function sessionStats() {
+  let staked = 0, pnl = 0, wins = 0; const run = [0];
+  for (const b of S.bets) { staked += b.stake; pnl += b.out ? b.stake * (b.out - 1) : -b.stake; if (b.out) wins++; run.push(pnl); }
+  const mins = S.sessionStart && !S.sampleBets ? (Date.now() - S.sessionStart) / 60000 : 0;
+  return { n: S.bets.length, staked, pnl, wins, run, mins };
+}
+function renderSession() {
+  $("lossLimit").value = S.lossLimit; $("timeLimit").value = S.timeLimit;
+  const st = sessionStats(), ban = $("guardBanner");
+  const lossUse = S.lossLimit > 0 ? Math.max(0, -st.pnl) / S.lossLimit : 0, timeUse = S.timeLimit > 0 ? st.mins / S.timeLimit : 0, use = Math.max(lossUse, timeUse);
+  if (S.sampleBets) { ban.className = "banner example"; ban.innerHTML = `<span class="grow"><strong>Example session.</strong> Log your first bet and these examples are cleared.</span>`; }
+  else if (!st.n) { ban.className = "banner ok"; ban.innerHTML = `<span class="grow"><strong>Ready.</strong> Limits set: stop if down ${esc(money(S.lossLimit))} or after ${S.timeLimit} minutes.</span>`; }
+  else if (use >= 1) { ban.className = "banner stop"; ban.innerHTML = `<span class="grow"><strong>Stop here.</strong> You have reached the ${lossUse >= 1 ? `loss limit of ${esc(money(S.lossLimit))}` : `time limit of ${S.timeLimit} minutes`} you set. Raising stakes to win it back is how small losses become large ones.</span>`; }
+  else if (use >= .75) { ban.className = "banner warn"; ban.innerHTML = `<span class="grow"><strong>Getting close.</strong> ${pct(use, 0)} of your ${lossUse >= timeUse ? "loss" : "time"} limit used. Decide now how you will finish.</span>`; }
+  else { ban.className = "banner ok"; ban.innerHTML = `<span class="grow"><strong>Within your limits.</strong> ${pct(lossUse, 0)} of the loss limit and ${pct(timeUse, 0)} of the time limit used.</span>`; }
+  $("sessKpis").innerHTML =
+    kpi("Bets", st.n, st.n ? `${st.wins} cashed out` : "") +
+    kpi("Profit / loss", `<span class="${st.pnl >= 0 ? "good" : "bad"}">${esc(money(st.pnl, true))}</span>`) +
+    kpi("Staked", esc(money(st.staked)), st.staked ? `long-run cost ${esc(money(st.staked * (1 - rtp())))}` : "") +
+    kpi("Time", S.sampleBets ? "–" : `${Math.floor(st.mins)} min`, S.timeLimit ? `limit ${S.timeLimit} min` : "");
+  const svg = $("pnlChart"), W = 640, H = 200, L = 52, R = 12, T = 12, B = 14, run = st.run;
+  const lim = S.lossLimit > 0 ? -S.lossLimit : 0;
+  const lo = Math.min(0, lim, ...run), hi = Math.max(0, ...run), span = hi - lo || 1;
+  const xs = (i) => L + i / Math.max(1, run.length - 1) * (W - L - R), ys = (v) => T + (hi - v) / span * (H - T - B);
+  let g = `<line class="zero" x1="${L}" x2="${W - R}" y1="${ys(0)}" y2="${ys(0)}"/><text x="${L - 6}" y="${ys(0) + 4}" text-anchor="end">0</text>`;
+  if (lim) g += `<line class="limit" x1="${L}" x2="${W - R}" y1="${ys(lim)}" y2="${ys(lim)}"/><text x="${L - 6}" y="${ys(lim) + 4}" text-anchor="end">limit</text>`;
+  if (run.length > 1) g += `<path class="obs" d="${run.map((v, i) => (i ? "L" : "M") + xs(i).toFixed(1) + " " + ys(v).toFixed(1)).join("")}"/><circle class="dot" cx="${xs(run.length - 1)}" cy="${ys(run[run.length - 1])}" r="4"/>`;
+  else g += `<text x="${W / 2}" y="${T + 20}" text-anchor="middle">Log a bet to start the line</text>`;
+  svg.innerHTML = g;
+  let p = 0;
+  const rows = S.bets.map((b, i) => { const r = b.out ? b.stake * (b.out - 1) : -b.stake; p += r; return `<tr><td class="mono">${i + 1}</td><td class="n">${esc(money(b.stake))}</td><td class="n">${b.out ? fx(b.out) : "crashed"}</td><td class="n ${r >= 0 ? "good" : "bad"}">${esc(money(r, true))}</td><td class="n">${esc(money(p, true))}</td></tr>`; }).reverse();
+  $("betTable").innerHTML = rows.length ? `<thead><tr><th>Bet</th><th class="n">Stake</th><th class="n">Cashed out</th><th class="n">Result</th><th class="n">Running</th></tr></thead><tbody>${rows.join("")}</tbody>` : "";
+  $("undoBet").disabled = S.sampleBets || !S.bets.length;
+}
+
+// ---------- AI analyst ----------
+let sampleFn = null, ctl = null;
+const chatTurns = [];
+function contextForAI() {
+  const a = analyse(), st = sessionStats();
+  return JSON.stringify({
+    game: "Sporty Hero, the SportyBet crash game. Each round a multiplier rises from 1.00x until it crashes; a player who cashes out before the crash wins stake × multiplier.",
+    rtpPercent: S.rtp, currency: S.cur,
+    history: a ? {
+      isExampleData: S.sampleRounds, rounds: a.n, last30OldestFirst: S.rounds.slice(-30), median: a.median, highest: a.max,
+      shareReached2x: +a.share2.toFixed(4), expected2x: +surv(2).toFixed(4), shareReached10x: +a.share10.toFixed(4), expected10x: +surv(10).toFixed(4),
+      longestRunUnder2x: a.longest, typicalLongestRun: Math.round(a.longestExp),
+      fixedTargetReturnPer1: a.targets.map((t) => ({ target: t.t, wins: t.hits, returnPer1: +t.ret.toFixed(3) })),
+      afterRunsUnder2x: a.streaks.map((s) => ({ runAtLeast: s.k, cases: s.n, nextReached2x: s.n ? +s.rate.toFixed(3) : null })),
+      chiSquareFitP: a.chi ? +a.chi.p.toFixed(4) : null, runsTestP: a.runs ? +a.runs.p.toFixed(4) : null, lag1CorrelationP: a.lag ? +a.lag.p.toFixed(4) : null,
+    } : null,
+    lastSimulation: S.sim ? S.sim.summary : null,
+    session: { isExampleData: S.sampleBets, bets: st.n, cashedOut: st.wins, staked: st.staked, profitLoss: st.pnl, minutes: Math.round(st.mins), lossLimit: S.lossLimit, timeLimitMinutes: S.timeLimit, last10: S.bets.slice(-10).map((b) => ({ stake: b.stake, cashedOutAt: b.out || null })) },
+  });
+}
+const RULES = `You are the analyst inside "Sporty Hero Analyst", a statistics tool for the Sporty Hero crash game on SportyBet. Follow these rules:
+- Rounds come from a provably fair random generator. Each round is independent, and past rounds carry no information about the next. Never predict, hint at or give "signals" for upcoming rounds, and never suggest a good moment to bet. If asked, explain kindly why it is impossible, using the user's own statistics.
+- The house keeps (100 − RTP)% of every stake on average, for every cash-out target and every staking plan. Say so whenever strategy comes up. Explain the trade-offs between targets and plans (how often you win against how much you can lose, and the risk of going bust) with the numbers provided.
+- Predictor apps, "hacks" and paid signal groups do not work and are often scams. Say so plainly when asked.
+- Use the JSON data below. If isExampleData is true, say the figures are example data, not the user's own.
+- If the session shows losses at or past the user's limits, chasing losses or rising stakes, recommend stopping, and mention SportyBet's deposit limits and self-exclusion settings and free help such as Gamblers Anonymous.
+- Be concise: short paragraphs or a few bullet points in plain text, with no tables or headings. Use the currency symbol given. Write like a knowledgeable friend, not a salesperson.`;
+function addMsg(role, text) {
+  const d = document.createElement("div"); d.className = "msg " + (role === "user" ? "user" : "ai");
+  const who = document.createElement("span"); who.className = "who"; who.textContent = role === "user" ? "You" : "Analyst";
+  const body = document.createElement("span"); body.textContent = text;
+  d.append(who, body); $("chat").append(d); return body;
+}
+const errCopy = (c) => ({
+  not_granted: "The analyst needs your permission to use Claude. Reload the page to be asked again.",
+  rate_limited: "Too many questions in a short time. Wait a minute, then ask again.",
+  session_expired: "Sign in to Claude again, then ask.",
+  refused: "The analyst could not answer that. Try asking it differently.",
+  sampling_disabled: "Claude is not available on this account.",
+  prompt_too_large: "That question carried too much data. Clear part of your history and try again.",
+}[c] || "The answer was interrupted. Ask again.");
+async function ask(q) {
+  q = q.trim(); if (!q || !sampleFn || ctl) return;
+  $("askBox").value = ""; addMsg("user", q);
+  chatTurns.push({ role: "user", content: q });
+  const body = addMsg("ai", "Thinking…");
+  ctl = new AbortController(); $("askBtn").disabled = true; $("stopBtn").hidden = false;
+  const recent = chatTurns.slice(-10); if (recent[0].role !== "user") recent.shift();
+  const input = [{ role: "user", content: RULES + "\n\nCurrent data (JSON):\n" + contextForAI() }, ...recent];
+  try {
+    const { text, truncated } = await sampleFn(input, { cache: false, signal: ctl.signal, onText: ({ text }) => { body.textContent = text; } });
+    body.textContent = text + (truncated ? "\n\n(Cut short. Ask a narrower question.)" : "");
+    chatTurns.push({ role: "assistant", content: text });
+  } catch (e) {
+    chatTurns.pop();
+    const code = e && e.code;
+    if (code === "cancelled") body.textContent = ((e.text || "") + "\n(Stopped.)").trim();
+    else {
+      body.textContent = (e && e.text ? e.text + "\n\n" : "") + errCopy(code);
+      if (code === "not_granted" || code === "sampling_disabled") { $("askForm").hidden = true; $("prompts").hidden = true; }
+    }
+  } finally { ctl = null; $("askBtn").disabled = false; $("stopBtn").hidden = true; }
+}
+async function readShot() {
+  const f = $("shotFile").files[0]; if (!f || !sampleFn) return;
+  $("readShot").disabled = true; $("shotMsg").textContent = "Reading…";
+  try {
+    const res = await sampleFn.json(`This image is a screenshot from the Sporty Hero crash game (SportyBet) showing past round multipliers. List every round multiplier you can read clearly, in reading order (left to right, top to bottom). Skip anything you cannot read with confidence, and ignore stakes, balances and lists of other players' bets. Also say whether the most recent round appears first, last, or is unclear. Reply with only JSON like {"multipliers":[1.24,3.8,1.0],"newest":"first"}, where newest is "first", "last" or "unclear".`, { images: [f] });
+    const ms = Array.isArray(res && res.multipliers) ? res.multipliers.map(Number).filter((v) => v >= 1 && v < 1e7) : [];
+    if (!ms.length) { $("shotMsg").textContent = "No multipliers found in that image. Try a sharper screenshot of the history."; return; }
+    $("pasteBox").value = ms.map((v) => v.toFixed(2) + "x").join(" ");
+    if (res.newest === "first") $("newestFirst").checked = true; else if (res.newest === "last") $("newestFirst").checked = false;
+    $("shotMsg").textContent = `Read ${ms.length} multipliers. Check them in the box, then add them.`;
+  } catch (e) {
+    const code = e && e.code;
+    $("shotMsg").textContent = code === "images_unavailable" ? "Screenshots cannot be read here. Paste the numbers instead." : code === "image_rejected" ? "That file could not be read. Try a PNG or JPEG screenshot." : errCopy(code);
+  } finally { $("readShot").disabled = !$("shotFile").files.length; }
+}
+
+// ---------- tabs & wiring ----------
+const VIEWS = ["analysis", "rounds", "lab", "session", "ask"];
+function show(v) {
+  if (!VIEWS.includes(v)) v = "analysis";
+  for (const x of VIEWS) { $("view-" + x).hidden = x !== v; $("tab-" + x).setAttribute("aria-selected", String(x === v)); }
+  try { sessionStorage.setItem(KEY + ".tab", v); } catch (e) {}
+  if (v === "session") renderSession();
+}
+function renderAll() { renderAnalysis(); renderRounds(); renderLab(); renderSession(); }
+
+document.querySelectorAll("nav.tabs button").forEach((b) => b.addEventListener("click", () => show(b.dataset.view)));
+document.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => show(b.dataset.goto)));
+$("addRounds").onclick = () => addFromBox(false);
+$("replaceRounds").onclick = () => addFromBox(true);
+$("undoLast").onclick = () => { if (S.sampleRounds || !S.rounds.length) return; S.rounds.pop(); save(); renderAll(); };
+$("clearRounds").onclick = () => { $("clearConfirm").hidden = false; };
+$("clearNo").onclick = () => { $("clearConfirm").hidden = true; };
+$("clearYes").onclick = () => { S.rounds = []; S.sampleRounds = false; $("clearConfirm").hidden = true; save(); renderAll(); };
+$("rtp").onchange = () => { const v = +$("rtp").value; if (v >= 80 && v < 100) { S.rtp = v; save(); renderAll(); } else $("rtp").value = S.rtp; };
+$("cur").onchange = () => { S.cur = $("cur").value.trim().slice(0, 4); save(); renderAll(); };
+$("runSim").onclick = simulate;
+$("betForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const stake = +$("bStake").value, outRaw = $("bOut").value.trim(), out = outRaw ? +outRaw : 0;
+  if (!(stake > 0) || (outRaw && !(out >= 1))) return;
+  if (S.sampleBets) { S.bets = []; S.sampleBets = false; S.sessionStart = null; }
+  if (!S.sessionStart) S.sessionStart = Date.now();
+  S.bets.push({ stake, out, at: Date.now() }); $("bOut").value = "";
+  save(); renderSession();
+});
+$("undoBet").onclick = () => { if (S.sampleBets) return; S.bets.pop(); save(); renderSession(); };
+$("newSession").onclick = () => { S.bets = []; S.sampleBets = false; S.sessionStart = null; save(); renderSession(); };
+$("lossLimit").onchange = () => { S.lossLimit = Math.max(0, +$("lossLimit").value || 0); save(); renderSession(); };
+$("timeLimit").onchange = () => { S.timeLimit = Math.max(0, +$("timeLimit").value || 0); save(); renderSession(); };
+setInterval(() => { if (!$("view-session").hidden && S.sessionStart) renderSession(); }, 30000);
+$("askForm").addEventListener("submit", (e) => { e.preventDefault(); ask($("askBox").value); });
+$("stopBtn").onclick = () => { if (ctl) ctl.abort(); };
+document.querySelectorAll("#prompts button").forEach((b) => b.addEventListener("click", () => ask(b.dataset.q)));
+$("shotFile").onchange = () => { $("readShot").disabled = !$("shotFile").files.length; $("shotMsg").textContent = ""; };
+$("readShot").onclick = readShot;
+
+// ---------- boot ----------
+if (!load() || (S.sampleRounds && !S.rounds.length)) {
+  const rand = mulberry32(20261023);
+  S.rounds = Array.from({ length: 400 }, () => drawCrash(rand, rtp())); S.sampleRounds = true;
+  S.bets = [[100, 2], [100, 0], [200, 0], [100, 1.5], [100, 0], [150, 3.2], [100, 0], [100, 0]].map(([stake, out]) => ({ stake, out, at: 0 }));
+  S.sampleBets = true;
+}
+renderAll();
+if (!S.sim || !S.sim.finals) simulate();
+let startTab = "analysis";
+try { startTab = sessionStorage.getItem(KEY + ".tab") || startTab; } catch (e) {}
+if (VIEWS.includes(location.hash.slice(1))) startTab = location.hash.slice(1);
+show(startTab);
+
+(async () => {
+  const s = window.claude && window.claude.use ? await window.claude.use("sample").catch(() => null) : null;
+  if (!s) { $("aiOff").hidden = false; $("prompts").hidden = true; $("askForm").hidden = true; return; }
+  sampleFn = s;
+  const lim = await s.limits().catch(() => null);
+  $("shotCard").hidden = !(lim && lim.images);
+})();
+})();
+</script>
