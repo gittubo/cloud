@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  // three.js is one large chunk by nature; it is the whole app.
-  build: { chunkSizeWarningLimit: 800 },
+  // Relative paths, so the built site works from any folder or host.
+  base: './',
 })
