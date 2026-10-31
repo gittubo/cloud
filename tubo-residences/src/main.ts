@@ -73,7 +73,7 @@ stage.innerHTML = `
     </div>
   </section>
   <section class="scene" data-scene="window">
-    <div class="frame view view--1"><img class="graded" src="${R('interior')}" alt="Living room of a sea-view residence" /><div class="tint"></div></div>
+    <div class="frame view view--1"><img class="graded" src="${R('interior')}" alt="Living room of a sea-view residence" /><div class="tint"></div><img class="tod--night" src="${R('interior-night')}" alt="" /></div>
     <div class="frame view view--2"><img class="graded" src="${R('balcony')}" alt="The view from a high-floor balcony over the beach and the bay" /><div class="tint"></div></div>
   </section>
   <section class="scene" data-scene="gallery">
@@ -507,6 +507,10 @@ const shots = [
   { name: 'Overcast', img: 'tower-overcast' },
   { name: 'By night', img: 'tower-night' },
   { name: 'Living room', img: 'interior' },
+  { name: 'Living room at night', img: 'interior-night' },
+  { name: 'Kitchen & dining', img: 'kitchen' },
+  { name: 'Main bedroom', img: 'bedroom' },
+  { name: 'En-suite bath', img: 'bathroom' },
   { name: 'Balcony view', img: 'balcony' },
 ]
 function openGallery(): void {

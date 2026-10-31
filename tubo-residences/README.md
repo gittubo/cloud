@@ -34,7 +34,7 @@ S3, GitHub Pages…).
 | Filters (› on the right) | Status, bedrooms and floor range; the list and the tower update together |
 | Residence card | Mini plan, bedrooms, floor, area and **Floor plan**, tied to the apartment by a leader line |
 | Floor plan | Key plan, full layout, area, price, **Window view**, **Add to compare**, **Download floor plan** (SVG sheet) and **Enquire** (email) |
-| Window view | **View 1**: the living room and its sea view. **View 2**: from a high balcony over the beach and the bay |
+| Window view | **View 1**: the living room and its sea view, with a real night render for the night end of the slider. **View 2**: from a high balcony over the beach and the bay |
 | **Compare** | Up to four residences side by side |
 | **Gallery** | All the renders |
 | **Highlights** | Project facts and selling points |
@@ -48,14 +48,15 @@ S3, GitHub Pages…).
 | `tower-day.jpg` | The main tower view; the apartments were traced on it |
 | `tower-sunrise.jpg`, `tower-overcast.jpg`, `tower-night.jpg` | Edits of the day render with the same framing, so the traced apartments still line up |
 | `aerial.jpg` | Location view |
-| `interior.jpg` | Window view 1 and the gallery |
+| `interior.jpg`, `interior-night.jpg` | Window view 1 (the night render fades in with the slider) and the gallery |
+| `kitchen.jpg`, `bedroom.jpg`, `bathroom.jpg` | Gallery |
 | `balcony.jpg` | Window view 2 and the gallery |
 
 To replace the tower render, also re-measure the balcony slabs in
 `src/facade.ts`. The apartment outlines are drawn from those numbers.
 
-Worth adding later: more interiors and higher-resolution versions. The
-current images are 1344 × 752.
+Worth adding later: higher-resolution versions. The current images are
+1344 × 752.
 
 ## Placeholders
 
