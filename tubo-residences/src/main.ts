@@ -3,7 +3,7 @@
 // floor-plan sheet and compare.
 import './styles.css'
 import { brand, FLOORS, highlights, places, statusColor, statusLabel, units, type Status, type Unit } from './data'
-import { AERIAL_TOWER, AERIAL_TOWER_PIN, RENDER_H, RENDER_W, unitCentre, unitPoints } from './facade'
+import { AERIAL_TOWER_PIN, RENDER_H, RENDER_W, unitCentre, unitPoints } from './facade'
 import { downloadPlan, keyPlanSvg, planSvg } from './plans'
 
 type View = 'intro' | 'location' | 'apartments' | 'plan' | 'window' | 'gallery'
@@ -76,6 +76,10 @@ stage.innerHTML = `
     <div class="frame view view--1"><img class="graded" src="${R('interior')}" alt="Living room of a sea-view residence" /><div class="tint"></div><img class="tod--night" src="${R('interior-night')}" alt="" /></div>
     <div class="frame view view--2"><img class="graded" src="${R('balcony')}" alt="The view from a high-floor balcony over the beach and the bay" /><div class="tint"></div></div>
   </section>
+  <video class="flyin" poster="${R('aerial')}" muted playsinline preload="auto" aria-hidden="true">
+    <source src="${import.meta.env.BASE_URL}renders/flyin.mp4" type="video/mp4" />
+    <source src="${import.meta.env.BASE_URL}renders/flyin.webm" type="video/webm" />
+  </video>
   <section class="scene" data-scene="gallery">
     <div class="frame"><img class="gallery__img" alt="" /></div>
   </section>`
@@ -294,22 +298,37 @@ function openLocation(): void {
   closePanels()
   selectUnit(null)
   setView('location')
-  aerialFrame.classList.remove('is-diving')
   showScene('location')
   hint('Tap the tower to explore its residences')
 }
 
-/** Dive from the aerial into the tower: the aerial zooms at the tower as the tower photo settles in. */
+// The drone fly-in from the aerial to the tower. Its last frame is the tower
+// render, so when it fades out the tower view underneath is already in place.
+const flyin = $<HTMLVideoElement>('.flyin', stage)
+function playFlyIn(): void {
+  let finished = false
+  const finish = () => {
+    if (finished) return
+    finished = true
+    app.classList.remove('is-flying')
+  }
+  flyin.addEventListener('ended', finish, { once: true })
+  flyin.addEventListener('error', finish, { once: true })
+  flyin.currentTime = 0
+  app.classList.add('is-flying')
+  flyin.play().catch(finish)
+  // Never leave the visitor stuck behind a stalled video.
+  setTimeout(finish, 6000)
+}
+// Tap to skip.
+flyin.addEventListener('click', () => flyin.dispatchEvent(new Event('ended')))
+
+/** From the aerial, fly in to the tower; from anywhere else, go straight there. */
 function openTower(): void {
   closePanels()
-  const fromAerial = state.view === 'location' || state.view === 'intro'
+  const fromAerial = state.view === 'location'
   setView('apartments')
-  if (fromAerial && !reduced) {
-    const o = cover(AERIAL_TOWER.x, AERIAL_TOWER.y)
-    aerialFrame.style.transformOrigin = `${o.x}px ${o.y}px`
-    aerialFrame.classList.add('is-diving')
-    setTimeout(() => aerialFrame.classList.remove('is-diving'), 1400)
-  }
+  if (fromAerial && !reduced) playFlyIn()
   showScene('tower')
   if (!mobile()) toggleRail(true)
   focus(state.unit)

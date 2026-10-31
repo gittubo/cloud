@@ -29,7 +29,7 @@ S3, GitHub Pages…).
 | Part | What it does |
 |---|---|
 | Time-of-day slider (top) | Crossfades the tower between its real sunrise, day, overcast and night renders. The other photos are colour-graded to follow it |
-| **Location** | Aerial render of the seafront with the tower and nearby places pinned. Tap the tower to dive in |
+| **Location** | Aerial render of the seafront with the tower and nearby places pinned. Tap the tower for a 3-second drone fly-in (tap to skip) that lands on the tower view |
 | **Apartments** | Every residence traced on the tower photo in its status colour: blue available, yellow reserved, red sold. Hover for details; tap to zoom in and select |
 | Filters (› on the right) | Status, bedrooms and floor range; the list and the tower update together |
 | Residence card | Mini plan, bedrooms, floor, area and **Floor plan**, tied to the apartment by a leader line |
@@ -51,6 +51,7 @@ S3, GitHub Pages…).
 | `interior.jpg`, `interior-night.jpg` | Window view 1 (the night render fades in with the slider) and the gallery |
 | `kitchen.jpg`, `bedroom.jpg`, `bathroom.jpg` | Gallery |
 | `balcony.jpg` | Window view 2 and the gallery |
+| `flyin.mp4`, `flyin.webm` | The aerial-to-tower fly-in (Kling 4.0, 3 s). It starts on `aerial.jpg` and ends on `tower-day.jpg`, so it cuts seamlessly into the tower view |
 
 To replace the tower render, also re-measure the balcony slabs in
 `src/facade.ts`. The apartment outlines are drawn from those numbers.

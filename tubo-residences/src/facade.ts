@@ -49,6 +49,5 @@ export function unitCentre(u: Pick<Unit, 'floor' | 'slot'>): { x: number; y: num
   return { x, y: (slabY(top, x) + slabY(top + 1, x)) / 2 + 2 }
 }
 
-/** The tower in the aerial render: where the Location view zooms in, and its pin. */
-export const AERIAL_TOWER = { x: 615, y: 345 }
+/** Where the tower's pin sits on the aerial render. */
 export const AERIAL_TOWER_PIN = { x: 615, y: 168 }
